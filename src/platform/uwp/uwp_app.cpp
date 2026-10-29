@@ -72,6 +72,17 @@ extern "C" bool uwp_window_pixels(int *width, int *height)
 {
     try
     {
+        // On the console the swap chain has the TV's mode (as RetroArch-UWP does): the window is 1080p in its own units
+        // whatever the TV is at, and its scale does not say otherwise. A PC has no HDMI information (a null object).
+        auto hdmi = HdmiDisplayInformation::GetForCurrentView();
+        if (hdmi)
+        {
+            auto mode = hdmi.GetCurrentDisplayMode();
+            *width = (int)mode.ResolutionWidthInRawPixels();
+            *height = (int)mode.ResolutionHeightInRawPixels();
+            if (*width > 0 && *height > 0)
+                return true;
+        }
         auto window = CoreWindow::GetForCurrentThread();
         if (!window)
             return false;
