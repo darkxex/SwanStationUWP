@@ -40,3 +40,49 @@ index 44f5bb1..39947f9 100644
      target_compile_definitions(core PUBLIC "WITH_RECOMPILER=1")
    else()
      target_compile_definitions(core PUBLIC "WITH_RECOMPILER=1" "WITH_MMAP_FASTMEM=1")
+diff --git a/src/common/windows_headers.h b/src/common/windows_headers.h
+index c252d922..d48ffae8 100644
+--- a/src/common/windows_headers.h
++++ b/src/common/windows_headers.h
+@@ -7,10 +7,40 @@
+ #define NOMINMAX 1
+ #endif
+ 
+-// require vista+
++// require vista+ (UWP: 10, for the *FromApp calls)
+ #ifdef _WIN32_WINNT
+ #undef _WIN32_WINNT
+ #endif
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
++#define _WIN32_WINNT 0x0A00
++#else
+ #define _WIN32_WINNT _WIN32_WINNT_VISTA
++#endif
+ 
+ #include <windows.h>
++
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP && defined(__cplusplus)
++// UWP (Xbox in developer mode): the SDK maps VirtualAlloc/VirtualProtect to the *FromApp calls itself (Windows 10), but
++// not these desktop ones the code uses. No views at a fixed address (fastmem is off) and no vectored exception
++// handler (installing it fails).
++static inline HANDLE CreateFileMappingA(HANDLE file, LPSECURITY_ATTRIBUTES attributes, DWORD protect, DWORD size_high,
++                                        DWORD size_low, LPCSTR /*name: the mapping stays the process's own*/)
++{
++  return CreateFileMappingFromApp(file, attributes, protect, (static_cast<ULONG64>(size_high) << 32) | size_low, nullptr);
++}
++static inline LPVOID MapViewOfFileEx(HANDLE mapping, DWORD access, DWORD offset_high, DWORD offset_low, SIZE_T size,
++                                     LPVOID fixed_address)
++{
++  if (fixed_address)
++    return nullptr;
++  return MapViewOfFileFromApp(mapping, access, (static_cast<ULONG64>(offset_high) << 32) | offset_low, size);
++}
++static inline PVOID AddVectoredExceptionHandler(ULONG, PVECTORED_EXCEPTION_HANDLER)
++{
++  return nullptr;
++}
++static inline ULONG RemoveVectoredExceptionHandler(PVOID)
++{
++  return 0;
++}
++#endif

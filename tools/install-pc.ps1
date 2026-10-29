@@ -12,13 +12,21 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$package = Get-ChildItem -Path (Join-Path $root "dist") -Filter "SwanStationXbox_*_x64*.appx" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $package) { throw "No .appx in dist: run tools\build-xbox.ps1 first." }
+$package = Get-ChildItem -Path (Join-Path $root "dist") -Include "SwanStationXbox_*_x64*.msix", "SwanStationXbox_*_x64*.appx" -Recurse |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $package) { throw "No .msix in dist: run tools\build-xbox.ps1 first." }
 
-$cer = Join-Path $root "xbox\SwanStationXbox.cer"
-if (Test-Path $cer) {
-    Import-Certificate -FilePath $cer -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+# the build leaves the signing certificate next to the package: Windows installs only what a trusted certificate signed
+$cer = Get-ChildItem -Path $package.DirectoryName -Filter "*.cer" | Select-Object -First 1
+if (-not $cer) { throw "No .cer next to the package: run tools\build-xbox.ps1 again." }
+Import-Certificate -FilePath $cer.FullName -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+
+# the VC++ runtime the package depends on (x64 is the one that matters; the build copies it next to the package)
+$deps = @(Get-ChildItem -Path (Join-Path $package.DirectoryName "Dependencies\x64") -Filter "*.appx" -ErrorAction SilentlyContinue | ForEach-Object FullName)
+if ($deps.Count -gt 0) {
+    Add-AppxPackage -Path $package.FullName -DependencyPath $deps -ForceApplicationShutdown
+} else {
+    Add-AppxPackage -Path $package.FullName -ForceApplicationShutdown
 }
-Add-AppxPackage -Path $package.FullName -ForceApplicationShutdown
 Write-Host "installed: start 'SwanStation Xbox' from the Start menu."
 Write-Host "log: $env:LOCALAPPDATA\Packages\SwanStationXbox_*\LocalState\SwanStation\logs\SwanStationPS5.log"

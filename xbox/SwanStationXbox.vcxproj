@@ -86,7 +86,7 @@
       <DisableSpecificWarnings>4100;4101;4127;4244;4267;4305;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
       <AdditionalDependencies>windowsapp.lib;xaudio2.lib;winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

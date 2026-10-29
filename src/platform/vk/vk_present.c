@@ -512,6 +512,7 @@ static bool create_pipeline(char *error, size_t size)
     gp.pDynamicState = &ds;
     gp.layout = V.layout;
     gp.renderPass = V.pass;
+    SwanStationPS5_log("vulkan: pipeline: the interface's quad");
     VkResult r = vkCreateGraphicsPipelines(V.device, VK_NULL_HANDLE, 1, &gp, NULL, &V.opaque);
     /* the game's shaders: the same opaque pipeline with another fragment stage */
     const uint32_t *shader_code[SHADED_N] = {SPV_LCD3X_FRAG, SPV_DOWNSAMPLE_FRAG, SPV_CRT_LOTTES_FRAG, SPV_CRT_PI_FRAG,
@@ -528,6 +529,7 @@ static bool create_pipeline(char *error, size_t size)
         if (r != VK_SUCCESS)
             break;
         stages[1].module = fm;
+        SwanStationPS5_log("vulkan: pipeline: the game's shader %d of %d", k + 1, SHADED_N);
         r = vkCreateGraphicsPipelines(V.device, VK_NULL_HANDLE, 1, &gp, NULL, &V.shaded[k]);
         vkDestroyShaderModule(V.device, fm, NULL);
     }

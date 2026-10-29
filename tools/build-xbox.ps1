@@ -22,7 +22,7 @@ function Find-MSBuild {
     if ($cmd) { return $cmd.Source }
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     if (Test-Path $vswhere) {
-        $found = & $vswhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+        $found = & $vswhere -version "[17.0,18.0)" -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
         if ($found) { return $found }
     }
     throw "MSBuild was not found. Install Visual Studio 2022 with the 'Universal Windows Platform development' workload."

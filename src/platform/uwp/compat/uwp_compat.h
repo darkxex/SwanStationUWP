@@ -22,6 +22,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <io.h>
+#include <math.h>
+#include <time.h>
 #include <intrin.h>
 #include <direct.h>
 #include <sys/types.h>

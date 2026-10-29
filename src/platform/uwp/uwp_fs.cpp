@@ -1,6 +1,6 @@
 /*
  * SwanStation Xbox - the POSIX file calls the frontend relies on, as UWP allows them: dirent on
- * FindFirstFileExFromAppW and an overwriting rename on MoveFileExFromAppW (the *FromApp calls work on the app's own
+ * FindFirstFileExFromAppW and an overwriting rename on ReplaceFileFromAppW (the *FromApp calls work on the app's own
  * folders and, where the user granted it, on drives).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -24,7 +24,17 @@ int uwp_rename(const char *from, const char *to)
     wchar_t a[1024], b[1024];
     if (!to_wide(from, a, 1024) || !to_wide(to, b, 1024))
         return -1;
-    return MoveFileExFromAppW(a, b, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? 0 : -1;
+    // There is no MoveFileExFromApp: a target that exists is replaced by ReplaceFile (atomic), else a plain move
+    WIN32_FILE_ATTRIBUTE_DATA attr;
+    if (GetFileAttributesExFromAppW(b, GetFileExInfoStandard, &attr))
+    {
+        if (ReplaceFileFromAppW(b, a, NULL, 0, NULL, NULL))
+            return 0;
+        // not replaceable (another volume, a folder): delete the old one, then move
+        if (!DeleteFileFromAppW(b))
+            return -1;
+    }
+    return MoveFileFromAppW(a, b) ? 0 : -1;
 }
 
 /* fopen with UTF-8 names (the CRT would read them in the ANSI code page: a game called "Pokémon" would not open) */

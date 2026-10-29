@@ -2730,6 +2730,12 @@ int main(int argc, char **argv)
     plat_want_high_refresh(high_refresh);
     plat_want_output(2); /* always 4K (1080p when the TV lacks the mode) */
 
+    /* the log first: plat_init opens the GPU, and a driver that crashes there must leave its lines behind */
+    make_dirs(app.paths.root);
+    make_dirs(app.paths.logs);
+    char log_path[SwanStationPS5_PATH_MAX];
+    path_join(log_path, sizeof(log_path), app.paths.logs, "SwanStationPS5.log");
+    SwanStationPS5_log_open(log_path);
     if (!plat_init())
     {
         char msg[300];
@@ -2760,9 +2766,6 @@ int main(int argc, char **argv)
     else
         snprintf(app.storage_error, sizeof(app.storage_error),
                  "%s isn't writable. Is the HEN running? (%s)", app.paths.root, app.sandbox_reason);
-    char log_path[SwanStationPS5_PATH_MAX];
-    path_join(log_path, sizeof(log_path), app.paths.logs, "SwanStationPS5.log");
-    SwanStationPS5_log_open(log_path);
     ps5_crash_install(log_path);
 #if defined(__PROSPERO__)
     /* the log's stderr lines go to klog: nc <Xbox IP> 3232 shows them live */

@@ -58,7 +58,11 @@ extern "C" bool uwp_current_display_mode(int *width, int *height, double *hz)
 {
     try
     {
-        auto mode = HdmiDisplayInformation::GetForCurrentView().GetCurrentDisplayMode();
+        // a PC gives a null object here, not an exception, and C++/WinRT does not check for null
+        auto info = HdmiDisplayInformation::GetForCurrentView();
+        if (!info)
+            return false;
+        auto mode = info.GetCurrentDisplayMode();
         *width = (int)mode.ResolutionWidthInRawPixels();
         *height = (int)mode.ResolutionHeightInRawPixels();
         *hz = mode.RefreshRate();
@@ -75,6 +79,8 @@ extern "C" bool uwp_request_display_mode(int width, int height, double hz)
     try
     {
         auto info = HdmiDisplayInformation::GetForCurrentView();
+        if (!info)
+            return false;
         HdmiDisplayMode wanted{nullptr};
         for (auto const &mode : info.GetSupportedDisplayModes())
         {
@@ -82,7 +88,7 @@ extern "C" bool uwp_request_display_mode(int width, int height, double hz)
                 continue;
             if (hz > 0 && (mode.RefreshRate() < hz - 0.5 || mode.RefreshRate() > hz + 0.5))
                 continue;
-            if (mode.ColorSpace() != HdmiDisplayColorSpace::BgrFullRange || mode.PixelEncoding() != HdmiDisplayPixelEncoding::Rgb444)
+            if (mode.ColorSpace() != HdmiDisplayColorSpace::RgbFull || mode.PixelEncoding() != HdmiDisplayPixelEncoding::Rgb444)
                 if (wanted) // keep a plain RGB mode if there is one
                     continue;
             wanted = mode;
