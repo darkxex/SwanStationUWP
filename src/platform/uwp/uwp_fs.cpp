@@ -41,6 +41,28 @@ int uwp_rename(const char *from, const char *to)
     return MoveFileFromAppW(a, b) ? 0 : -1;
 }
 
+static unsigned file_error;
+unsigned uwp_last_error(void) { return file_error; }
+
+/* mkdir: one folder, on CreateDirectoryFromApp. "Already there" is EEXIST, as the CRT's. */
+int uwp_mkdir(const char *path)
+{
+    wchar_t w[1024];
+    if (!to_wide(path, w, 1024))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (CreateDirectoryFromAppW(w, NULL))
+        return 0;
+    file_error = GetLastError();
+    errno = file_error == ERROR_ALREADY_EXISTS ? EEXIST
+            : file_error == ERROR_PATH_NOT_FOUND ? ENOENT
+            : file_error == ERROR_ACCESS_DENIED ? EACCES
+            : EIO;
+    return -1;
+}
+
 /* fopen with UTF-8 names (the CRT would read them in the ANSI code page: a game called "Pokémon" would not open). The
  * CRT only gets at the app's own folders; a file on a drive the user allowed (Settings > Privacy > File system) is
  * opened with CreateFile2FromApp and handed to the CRT as a descriptor. */
@@ -79,7 +101,10 @@ FILE *uwp_fopen(const char *path, const char *mode)
         flags |= _O_BINARY;
     HANDLE h = CreateFile2FromAppW(w, access, share, disposition, NULL);
     if (h == INVALID_HANDLE_VALUE)
+    {
+        file_error = GetLastError();
         return NULL;
+    }
     int fd = _open_osfhandle((intptr_t)h, flags);
     if (fd < 0)
     {

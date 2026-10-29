@@ -176,6 +176,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         window.SizeChanged([](CoreWindow const &, WindowSizeChangedEventArgs const &) {
             InterlockedExchange(&window_resized, 1);
         });
+        // The B button of an Xbox controller (and the Back key) is a "back" request to the system, which closes an app that
+        // does not take it: the app reads B itself (XInput), so the request is taken and nothing else happens.
+        SystemNavigationManager::GetForCurrentView().BackRequested(
+            [](IInspectable const &, BackRequestedEventArgs const &args) { args.Handled(true); });
         // F11 toggles full screen (the swap chain follows the new size through SizeChanged)
         window.KeyDown([](CoreWindow const &, KeyEventArgs const &args) {
             if (args.VirtualKey() != Windows::System::VirtualKey::F11 || args.KeyStatus().WasKeyDown)

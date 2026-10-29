@@ -948,6 +948,18 @@ static void draw_info(const Game *g, float alpha)
 
 /* ---------------------------------------------------------------- screen */
 
+/* The bar that fills while B is held, and the app closes when it is full. */
+static void draw_hold_bar(float hold)
+{
+    const char *msg = tr("Keep holding to close SwanStationUWP...");
+    float w = text_width(26, FONT_REGULAR, msg) + 96, h = 84;
+    float x = (plat_width() - w) * 0.5f, y = plat_height() - 300;
+    draw_rrect(x, y, w, h, TH_RADIUS_SMALL, 0xf0000000u | (TH_PILL & 0xffffffu));
+    text_draw(CENTER_X, y + 12, 26, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, msg);
+    draw_rrect(x + 32, y + 56, w - 64, 12, 6, TH_DIVIDER);
+    draw_rrect(x + 32, y + 56, fmaxf(12.0f, (w - 64) * fminf(hold / QUIT_HOLD, 1.0f)), 12, 6, TH_DANGER);
+}
+
 static void storage_screen(uint32_t pressed)
 {
     shelf_backdrop();
@@ -956,13 +968,39 @@ static void storage_screen(uint32_t pressed)
     draw_rrect(x, y, w, h, TH_RADIUS, TH_CARD_SOFT);
     icon_draw(ICON_ALERT_TRIANGLE, CENTER_X - 32, y + 40, 64, TH_GOLD);
     text_draw(CENTER_X, y + 124, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("SwanStation can't open LocalState/SwanStation"));
-    text_draw_fit(CENTER_X, y + 190, 24, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 80,
-                  app.storage_error);
+    /* "what failed|where": the first part big, the folder under it */
+    char reason[256], where[256] = "";
+    str_copy(reason, sizeof(reason), app.storage_error);
+    char *bar = strchr(reason, '|');
+    if (bar)
+    {
+        *bar = '\0';
+        str_copy(where, sizeof(where), bar + 1);
+    }
+    text_draw_fit(CENTER_X, y + 180, 32, FONT_BOLD, TH_GOLD, ALIGN_CENTER, w - 80, reason);
+    if (where[0])
+        text_draw_fit(CENTER_X, y + 232, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 80, where);
     static const int glyphs[] = {GLYPH_SQUARE};
     static const char *const labels[] = {"Settings"};
     app_draw_hints(glyphs, labels, 1, NULL);
     if (pressed & BIT(BTN_SQUARE))
         app_open_settings(SCREEN_LIBRARY);
+    /* B held closes the app (the system's "back" does not: it is taken in uwp_app.cpp) */
+    static float hold;
+    if (app.pads[app_nav_pad()].buttons & BIT(BTN_CIRCLE))
+    {
+        hold += app.dt;
+        if (hold >= QUIT_HOLD)
+            app.quit_requested = true;
+    }
+    else
+    {
+        if (hold > 0.0f && hold < QUIT_HOLD)
+            app_toast("Hold to exit SwanStationUWP...");
+        hold = 0.0f;
+    }
+    if (hold > 0.5f)
+        draw_hold_bar(hold);
     app_draw_toast();
 }
 
@@ -1688,6 +1726,9 @@ void shelf_screen(uint32_t pressed)
     /* O pressed with the shelf free: only such a press can start the hold-to-exit */
     const bool circle_on_shelf =
         (pressed & BIT(BTN_CIRCLE)) && !(S.dialog || S.details || P.open || F.open || S.launch_t > 0.0f);
+    if (pressed & BIT(BTN_CIRCLE))
+        SwanStationPS5_log("shelf: B pressed, shelf free: %d (dialog %d, details %d, picker %d, filter %d, launch %.2f)",
+                           circle_on_shelf, S.dialog, S.details, P.open, F.open, S.launch_t);
 
     /* ------------------------------------------------ input */
     if (P.open)
@@ -1882,6 +1923,8 @@ void shelf_screen(uint32_t pressed)
         static bool armed; /* O was pressed on the free shelf: not carried over from a menu, details or a dialog */
         if (!circle)
         {
+            if (armed)
+                SwanStationPS5_log("shelf: B released after %.2f s", hold);
             if (armed && hold > 0.0f && hold < QUIT_HOLD) /* a tap, not a hold */
                 app_toast("Hold to exit SwanStationUWP...");
             hold = 0.0f, armed = false;

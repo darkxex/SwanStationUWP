@@ -50,13 +50,17 @@ int uwp_rename(const char *from, const char *to);
 FILE *uwp_fopen(const char *path, const char *mode);
 /* stat on the *FromApp calls: the CRT's stat only sees the app's own folders, not a drive the user gave access to. */
 int uwp_stat(const char *path, struct stat *st);
+/* mkdir on CreateDirectoryFromApp (as RetroArch's UWP build): 0, or -1 with errno EEXIST, ENOENT or EACCES. */
+int uwp_mkdir(const char *path);
+/* The Windows error of the last uwp_fopen or uwp_mkdir that failed. */
+unsigned uwp_last_error(void);
 #ifdef __cplusplus
 }
 #endif
 #define rename(from, to) uwp_rename((from), (to))
 #define fopen(path, mode) uwp_fopen((path), (mode))
 #define stat(path, st) uwp_stat((path), (st))
-#define mkdir(path, mode) _mkdir(path)
+#define mkdir(path, mode) uwp_mkdir((path))
 #ifndef S_ISDIR
 #define S_ISDIR(m) (((m)&_S_IFMT) == _S_IFDIR)
 #define S_ISREG(m) (((m)&_S_IFMT) == _S_IFREG)

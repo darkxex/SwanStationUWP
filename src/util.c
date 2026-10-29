@@ -81,6 +81,10 @@ bool path_is_dir(const char *path)
 
 bool make_dirs(const char *path)
 {
+    /* The usual cases first, without asking about a single folder above: the folder is there already, or its parent
+     * is. On the Xbox every question about a folder outside the app's own (Q:/Users/...) takes over a second. */
+    if (path_is_dir(path) || mkdir(path, 0777) == 0)
+        return true;
     char tmp[SwanStationPS5_PATH_MAX];
     str_copy(tmp, sizeof(tmp), path);
     for (char *p = tmp + 1; *p; ++p)
@@ -88,11 +92,15 @@ bool make_dirs(const char *path)
         if (*p != '/')
             continue;
         *p = '\0';
-        if (mkdir(tmp, 0777) != 0 && errno != EEXIST)
-            return false;
+        /* The folders above the last one are only made when they are missing, and a failure is not judged here: on a
+         * console the ones above the app's own answer "access denied" or "not found" (a bare drive, "D:", is not a
+         * folder to ask about). The last one tells: it is there or it is not. */
+        const bool drive_only = tmp[1] == ':' && tmp[2] == '\0';
+        if (!drive_only && !path_is_dir(tmp))
+            mkdir(tmp, 0777);
         *p = '/';
     }
-    return mkdir(tmp, 0777) == 0 || errno == EEXIST;
+    return path_is_dir(tmp) || mkdir(tmp, 0777) == 0 || errno == EEXIST;
 }
 
 bool file_copy(const char *from, const char *to)

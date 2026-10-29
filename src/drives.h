@@ -26,6 +26,11 @@ static inline int drives_present(char paths[DRIVE_COUNT][4])
     for (int i = 0; i < DRIVE_COUNT; ++i)
         if (mask & (1u << i))
         {
+            /* an optical drive, a network share or a drive with no disk can take long to answer and holds no games */
+            wchar_t root[4] = {(wchar_t)(L'A' + i), L':', L'\\', 0};
+            const UINT type = GetDriveTypeW(root);
+            if (type == DRIVE_CDROM || type == DRIVE_REMOTE || type == DRIVE_RAMDISK || type == DRIVE_NO_ROOT_DIR)
+                continue;
             paths[n][0] = (char)('A' + i);
             paths[n][1] = ':';
             paths[n][2] = '\0';

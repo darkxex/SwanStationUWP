@@ -409,6 +409,29 @@ void app_restart_covers(void)
 
 
 
+/* How long each part of the start took (microseconds since the first mark), shown at the screen's corner and in the log */
+static uint64_t start_marks[8];
+static int start_mark_count;
+
+static void start_mark(void)
+{
+    if (start_mark_count < 8)
+        start_marks[start_mark_count++] = plat_ticks_us();
+}
+
+void app_startup_report(char *out, size_t size)
+{
+    /* marks: 0 start, 1 the screen, 2 the font and first picture, 3 the BIOS, 4 the drives, 5 the library */
+    static const char *const names[] = {"screen", "font", "bios", "drives", "library"};
+    size_t len = 0;
+    out[0] = '\0';
+    for (int i = 1; i < start_mark_count && len + 1 < size; ++i)
+        len += (size_t)snprintf(out + len, size - len, "%s %llu  ", names[i - 1],
+                                (unsigned long long)((start_marks[i] - start_marks[i - 1]) / 1000));
+    if (start_mark_count > 1 && len + 1 < size)
+        snprintf(out + len, size - len, "(ms)");
+}
+
 void app_rescan(void)
 {
     if (app.settings_game)
@@ -428,9 +451,9 @@ void app_rescan(void)
     roots[root_count++] = app.paths.games;
     char letters[DRIVE_COUNT][4];
     const int drive_total = drives_present(letters);
-    /* a drive that answers "access denied" (5): Windows has not allowed the app to read the drives (the system drive is
-     * left out: the app's own folders are there) */
-    app.file_access_denied = false;
+    /* a drive that answers "access denied" (5) (the system drive is left out: the app's own folders are there). A console
+     * answers so on its own system drives all the time: it only counts as blocked if no game was found (see below). */
+    bool drive_denied = false;
     for (int d = 0; d < drive_total; ++d)
     {
         if (letters[d][0] == 'C')
@@ -441,10 +464,12 @@ void app_rescan(void)
         if (drive_probe)
             closedir(drive_probe);
         else if (uwp_opendir_error() == 5)
-            app.file_access_denied = true;
+        {
+            /* one is enough to tell, and each question to a denied drive takes a quarter of a second on the console */
+            drive_denied = true;
+            break;
+        }
     }
-    if (app.file_access_denied)
-        SwanStationPS5_log("drives: access denied: Windows has not allowed the app to read the drives");
     int slot = 0;
     for (int d = 0; d < drive_total; ++d)
     {
@@ -457,18 +482,6 @@ void app_rescan(void)
             snprintf(drive_roots[slot], SwanStationPS5_PATH_MAX, "%s/%s", letters[d], app.global.usb_folder);
             roots[root_count++] = drive_roots[slot++];
         }
-    }
-    /* what each folder looked for says, and why not when it fails (the Windows error: 5 denied, 3 and 2 not there) */
-    for (int r = 0; r < root_count; ++r)
-    {
-        DIR *probe = opendir(roots[r]);
-        if (probe)
-        {
-            closedir(probe);
-            SwanStationPS5_log("scan: %s: opens", roots[r]);
-        }
-        else
-            SwanStationPS5_log("scan: %s: does not open (error %u)", roots[r], uwp_opendir_error());
     }
     char index[SwanStationPS5_PATH_MAX];
     path_join(index, sizeof(index), app.paths.root, "library.txt");
@@ -487,6 +500,9 @@ void app_rescan(void)
         if (app.library.count == 0)
             library_load_index(&app.library, index);
     }
+    app.file_access_denied = drive_denied && app.library.count == 0;
+    if (app.file_access_denied)
+        SwanStationPS5_log("drives: access denied and no games found: the drives cannot be read");
     shelf_show_all();
     app_restart_covers();
 }
@@ -1923,6 +1939,7 @@ int main(int argc, char **argv)
     char log_path[SwanStationPS5_PATH_MAX];
     path_join(log_path, sizeof(log_path), app.paths.logs, "SwanStationPS5.log");
     SwanStationPS5_log_open(log_path);
+    start_mark();
     if (!plat_init())
     {
         char msg[300];
@@ -1931,8 +1948,15 @@ int main(int argc, char **argv)
         for (;;)
             plat_sleep_us(1000000);
     }
+    start_mark(); /* the screen is open */
     if (!text_init())
         plat_notify("SwanStation: interface font missing from assets/fonts");
+    /* The first picture, before the slow part (the drives, the library): a console shows black until one is drawn */
+    plat_begin_frame(0xff000000u);
+    text_draw(plat_width() * 0.5f, plat_height() * 0.5f - 40, 56, FONT_BOLD, 0xffffffffu, ALIGN_CENTER, SwanStationPS5_TITLE);
+    text_draw(plat_width() * 0.5f, plat_height() * 0.5f + 40, 30, FONT_REGULAR, 0xffa0a0a0u, ALIGN_CENTER, "Loading...");
+    plat_end_frame();
+    start_mark(); /* the font and that picture */
 
     /* Sandboxed or not, files in /data open and save; only listing differs. */
     const char *dirs[] = {app.paths.root,   app.paths.games,  app.paths.bios,
@@ -1941,6 +1965,7 @@ int main(int argc, char **argv)
     for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); ++i)
         make_dirs(dirs[i]);
     bios_use_drive_dir();
+    start_mark(); /* ... the BIOS folder is chosen (the font scan before it counts here too) */
     bios_choices_scan(app.paths.bios); /* before the settings are read: the BIOS options list the folder's files */
     char probe[SwanStationPS5_PATH_MAX];
     path_join(probe, sizeof(probe), app.paths.root, ".write-test");
@@ -1951,7 +1976,8 @@ int main(int argc, char **argv)
         remove(probe);
     }
     else
-        snprintf(app.storage_error, sizeof(app.storage_error), "%s isn't writable.", app.paths.root);
+        snprintf(app.storage_error, sizeof(app.storage_error), "Windows error %u|%s (%s)", uwp_last_error(), app.paths.root,
+                 path_is_dir(app.paths.root) ? "the folder is there, writing fails" : "the folder is not there");
     ps5_crash_install(log_path);
 #if defined(__PROSPERO__)
     /* the log's stderr lines go to klog: nc <Xbox IP> 3232 shows them live */
@@ -1964,6 +1990,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < app.drive_count && i < DRIVE_COUNT; ++i)
         drives_list(app.drive_text[i], sizeof(app.drive_text[i]), i);
     SwanStationPS5_log("drives found: %s", app.drive_count ? found_drives : "none");
+    start_mark(); /* the drives are listed */
     app_started_us = plat_ticks_us();
     SwanStationPS5_log("SwanStation %s starting, data root %s", SwanStationPS5_VERSION, app.paths.root);
     SwanStationPS5_log("screen: %s", plat_screen_info());
@@ -2009,6 +2036,12 @@ int main(int argc, char **argv)
     shelf_init(app.global.last_game);
     if (!app.storage_error[0])
         app_rescan();
+    start_mark(); /* the library is read */
+    {
+        char took[200];
+        app_startup_report(took, sizeof(took));
+        SwanStationPS5_log("startup: %s", took);
+    }
     shelf_select_game(app.global.last_game);
     if (launch_rom[0] && !app.storage_error[0])
     {
