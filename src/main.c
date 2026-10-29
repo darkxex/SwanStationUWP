@@ -6,7 +6,6 @@
  * live in src/ui (shelf, settings, in-game menu and cheats).
  * Emulation is SwanStation, linked statically and driven through libretro.
  */
-#include "ntfs/ntfsfs.h"
 #include "drives.h"
 #include "app.h"
 
@@ -18,16 +17,12 @@
 #include "gamedb.h"
 #include "profiles.h"
 #include "covers.h"
-#include "disceta.h"
-#include "discimport.h"
 #include "i18n.h"
 #include "platform/platform.h"
 #include "platform/crash.h"
 #include "platform/vk/vk_probe.h"
-#include "nfs/nfs.h"
 #include "play.h"
 #include "remote.h"
-#include "update.h"
 #include "ra/achievements.h"
 #include "stats.h"
 #include "ui/coverflow.h"
@@ -50,7 +45,7 @@
 
 #define UI_RATE 44100
 
-App app = {.unlock_setting = true, .dt = 1.0f / 60.0f};
+App app = {.dt = 1.0f / 60.0f};
 
 static char toast[160];
 static uint64_t toast_until;
@@ -421,23 +416,7 @@ void app_restart_covers(void)
     covers_download_loaded = app.global.cover_download;
 }
 
-static Game dg;                  /* the disc played from the drive, while it is in (see disc_play_frame) */
-static Game dp;                  /* a disc put in that is not in the library: its entry on the shelf asks again (see disc_ask_open) */
-static bool dp_active, dp_gone;
-static bool disc_after_game;
-static int dp_removed_mark;
-static DiscId dp_id;
-static void dp_drop(void);
-static bool dg_active, dg_gone;
-static int dg_removed_mark;
 
-static bool nfs_rescan_from_mount; /* the rescan that follows a mount does not start another */
-static bool nfs_notify;            /* say how the mount went (the player asked for it) */
-
-void app_nfs_notify(void)
-{
-    nfs_notify = true;
-}
 
 void app_rescan(void)
 {
@@ -449,59 +428,40 @@ void app_rescan(void)
         app.game_has_own = false;
         app.settings = app.global;
     }
-    /* The games folder, then on each drive both <drive>/<name> and <drive>/<name>/games, for our
-     * folder name. */
-    static const char *const names[] = {"SwanStation"};
-    static char drive_roots[DRIVE_COUNT * 2 * 2][SwanStationPS5_PATH_MAX];
-    static char usb_roots[DRIVE_COUNT][SwanStationPS5_PATH_MAX];
-    static char nfs_roots[NFS_MAX_SHARES + NTFSFS_MAX_VOLUMES * 2][NFS_PATH_MAX];
-    static char ntfs_points[NTFSFS_MAX_VOLUMES][NTFSFS_PATH_MAX];
-    const char *roots[3 + DRIVE_COUNT * 2 * 2 + DRIVE_COUNT + NFS_MAX_SHARES + NTFSFS_MAX_VOLUMES * 2];
+    /* The games folder, then on every drive Windows reports (as RetroArch's UWP build lists them: a console gives a USB
+     * drive whatever letter it likes) three places: <drive>/SwanStation, <drive>/SwanStation/games and the "Games
+     * folder on drives" name ("psx" by default). */
+    static char drive_roots[DRIVE_COUNT * 3][SwanStationPS5_PATH_MAX];
+    const char *roots[1 + DRIVE_COUNT * 3];
     int root_count = 0;
     roots[root_count++] = app.paths.games;
-    int drive_count = 0;
-    for (int d = 0; d < DRIVE_COUNT; ++d)
-        for (int n = 0; n < 2; ++n)
-        {
-            if (d < DRIVE_EXT_COUNT && !drive_usable(d))
-                continue;
-            char *plain = drive_roots[drive_count++], *games = drive_roots[drive_count++];
-            snprintf(plain, SwanStationPS5_PATH_MAX, "%s/%s", drive_paths[d], names[n]);
-            snprintf(games, SwanStationPS5_PATH_MAX, "%s/%s/games", drive_paths[d], names[n]);
-            roots[root_count++] = plain;
-            roots[root_count++] = games;
-        }
-    /* Settings > System > SwanStation > Games folder on drives: that name on every drive at once, as the drive's
-     * number changes with the ones plugged in */
-    if (app.global.usb_folder[0])
-        for (int u = 0; u < DRIVE_COUNT; ++u)
-        {
-            if (u < DRIVE_EXT_COUNT && !drive_usable(u))
-                continue;
-            snprintf(usb_roots[u], SwanStationPS5_PATH_MAX, "%s/%s", drive_paths[u], app.global.usb_folder);
-            roots[root_count++] = usb_roots[u];
-        }
-    /* Settings > System > NFS shares: the ones that are not mounted are tried on their own thread, so a rescan never
-     * waits for a server; the library is scanned again (in the main loop) when that is over */
-    if (app.global.nfs_shares[0] && !app.game && !nfs_rescan_from_mount)
-        nfs_mount_begin(8000);
-    const int nfs_first = root_count;
-    const int nfs_count = nfs_rescan_from_mount || app.game ? nfs_mount_points(nfs_roots, NFS_MAX_SHARES) : 0;
-    int shared_count = nfs_count;
-    if (app.global.ntfs_enabled)
+    char letters[DRIVE_COUNT][4];
+    const int drive_total = drives_present(letters);
+    int slot = 0;
+    for (int d = 0; d < drive_total; ++d)
     {
-        if (!app.game)
-            ntfsfs_scan();
-        const int volumes = ntfsfs_mount_points(ntfs_points, NTFSFS_MAX_VOLUMES);
-        for (int n = 0; n < volumes; ++n)
+        snprintf(drive_roots[slot], SwanStationPS5_PATH_MAX, "%s/SwanStation", letters[d]);
+        roots[root_count++] = drive_roots[slot++];
+        snprintf(drive_roots[slot], SwanStationPS5_PATH_MAX, "%s/SwanStation/games", letters[d]);
+        roots[root_count++] = drive_roots[slot++];
+        if (app.global.usb_folder[0])
         {
-            if (app.global.usb_folder[0])
-                snprintf(nfs_roots[shared_count++], NFS_PATH_MAX, "%s/%s", ntfs_points[n], app.global.usb_folder);
-            snprintf(nfs_roots[shared_count++], NFS_PATH_MAX, "%s/SwanStation/games", ntfs_points[n]);
+            snprintf(drive_roots[slot], SwanStationPS5_PATH_MAX, "%s/%s", letters[d], app.global.usb_folder);
+            roots[root_count++] = drive_roots[slot++];
         }
     }
-    for (int n = 0; n < shared_count; ++n)
-        roots[root_count++] = nfs_roots[n];
+    /* what each folder looked for says, and why not when it fails (the Windows error: 5 denied, 3 and 2 not there) */
+    for (int r = 0; r < root_count; ++r)
+    {
+        DIR *probe = opendir(roots[r]);
+        if (probe)
+        {
+            closedir(probe);
+            SwanStationPS5_log("scan: %s: opens", roots[r]);
+        }
+        else
+            SwanStationPS5_log("scan: %s: does not open (error %u)", roots[r], uwp_opendir_error());
+    }
     char index[SwanStationPS5_PATH_MAX];
     path_join(index, sizeof(index), app.paths.root, "library.txt");
     char serials[SwanStationPS5_PATH_MAX];
@@ -512,7 +472,6 @@ void app_rescan(void)
         /* Can't list folders: the sync tool's index is the library. */
         if (!library_load_index(&app.library, index))
             app.library.count = 0;
-        library_scan_append(&app.library, roots + nfs_first, shared_count); /* the shares are listed by the app itself */
     }
     else
     {
@@ -520,14 +479,7 @@ void app_rescan(void)
         if (app.library.count == 0)
             library_load_index(&app.library, index);
     }
-    if (dg_active)
-        library_add_game(&app.library, &dg);
-    if (dp_active)
-        library_add_game(&app.library, &dp);
-    if (nfs_rescan_from_mount)
-        shelf_library_changed(); /* the shares came up on their own: the player stays where they were */
-    else
-        shelf_show_all();
+    shelf_show_all();
     app_restart_covers();
 }
 
@@ -694,7 +646,6 @@ static void question_draw(void)
 
 /* ---------------------------------------------------------------- achievements banner */
 
-static bool opened_by_daemon;  /* the disc daemon started the app (payload/discd.c leaves <root>/daemon-launch) */
 /* A home-screen forwarder (the Xbox Forwarder Format) starts the app with --rom <path> and maybe --exit-after-game:
  * that game starts at once, and with the flag the app closes when it ends. */
 static char launch_rom[SwanStationPS5_PATH_MAX];
@@ -926,6 +877,49 @@ static bool bios_file_present(void)
     return bios_dir_has_bin(app.paths.bios);
 }
 
+/* A BIOS (a .bin) in dir: unlike bios_dir_has_bin, a folder that cannot be opened has none. */
+static bool bios_dir_really_has_bin(const char *dir)
+{
+    DIR *d = opendir(dir);
+    if (!d)
+        return false;
+    bool found = false;
+    struct dirent *e;
+    while (!found && (e = readdir(d)))
+        found = str_icmp(path_ext(e->d_name), "bin") == 0;
+    closedir(d);
+    return found;
+}
+
+/* The BIOS is looked for in the app's own bios folder; when that holds none, in <drive>/<Games folder>/bios and
+ * <drive>/SwanStation/bios on every drive (a USB with psx/bios/ beside psx/<games>), and the first folder with a .bin
+ * becomes the BIOS folder: the core is told it as its system directory. Before the settings are read. */
+static void bios_use_drive_dir(void)
+{
+    if (bios_dir_really_has_bin(app.paths.bios))
+        return;
+    char folder[48] = "psx";
+    config_peek_string(app.paths.config, "usb_folder", folder, sizeof(folder));
+    char letters[DRIVE_COUNT][4];
+    const int total = drives_present(letters);
+    for (int d = 0; d < total; ++d)
+        for (int k = 0; k < 2; ++k)
+        {
+            char dir[SwanStationPS5_PATH_MAX];
+            if (k == 0 && !folder[0])
+                continue;
+            if (k == 0)
+                snprintf(dir, sizeof(dir), "%s/%s/bios", letters[d], folder);
+            else
+                snprintf(dir, sizeof(dir), "%s/SwanStation/bios", letters[d]);
+            if (!bios_dir_really_has_bin(dir))
+                continue;
+            str_copy(app.paths.bios, sizeof(app.paths.bios), dir);
+            SwanStationPS5_log("bios: none in our bios folder, using %s", dir);
+            return;
+        }
+}
+
 /* A libcrypt game (most PAL discs) needs its .sbi file beside the disc image, with the image's name. The package holds
  * them (assets/sbi_files/<serial>.sbi: patches, from psxdatacenter): when the disc has none, its copy is put there. */
 
@@ -1139,752 +1133,6 @@ static void sbi_check_draw(void)
     draw_rrect(x + 32, y + 56, fmaxf(12.0f, (w - 64) * fminf(p, 1.0f)), 12, 6, TH_FOCUS);
 }
 
-/* The disc import (Settings > System > SwanStation > Import disc, or a disc put in the drive on the shelf): while it
- * runs the buttons stay out of every screen and nothing can cancel it; when it ends the result is shown and the
- * library looks for the new game */
-static char handled_discs[16][24]; /* discs already dealt with since the app opened: each one starts once */
-static int handled_count;
-static bool auto_launch;           /* the import was started by a disc being put in: start the game when it is done */
-
-static bool disc_handled(const char *key)
-{
-    for (int i = 0; i < handled_count; ++i)
-        if (!strcmp(handled_discs[i], key))
-            return true;
-    return false;
-}
-
-static void disc_mark_handled(const char *key)
-{
-    if (key[0] && !disc_handled(key) && handled_count < 16)
-        str_copy(handled_discs[handled_count++], sizeof(handled_discs[0]), key);
-}
-
-/* One of the files in the game's folder carries the disc's "[key]": a disc of a game with several, installed beside
- * the others */
-static bool folder_has_disc(const Game *g, const char *tag)
-{
-    DIR *d = opendir(g->folder);
-    bool found = false;
-    struct dirent *e;
-    while (d && !found && (e = readdir(d)))
-        if (strstr(e->d_name, tag))
-        {
-            const char *ext = path_ext(e->d_name);
-            found = !str_icmp(ext, "cue") || !str_icmp(ext, "chd") || !str_icmp(ext, "iso") || !str_icmp(ext, "pbp") ||
-                    !str_icmp(ext, "ecm") || !str_icmp(ext, "mds");
-        }
-    if (d)
-        closedir(d);
-    return found;
-}
-
-/* The game for a disc key in the library: its serial, the "[key]" the installation put in the folder's or the file's
- * name, or a disc of it that was installed beside the first */
-static int find_game_by_key(const char *key)
-{
-    char tag[32];
-    snprintf(tag, sizeof(tag), "[%s]", key);
-    for (int i = 0; i < app.library.count; ++i)
-    {
-        const Game *g = &app.library.games[i];
-        if ((g->serial[0] && !strcasecmp(g->serial, key)) || strstr(g->path, tag))
-            return i;
-    }
-    for (int i = 0; i < app.library.count; ++i)
-        if (folder_has_disc(&app.library.games[i], tag))
-            return i;
-    return -1;
-}
-
-/* Which disc of the game's playlist (.m3u) is the one put in: 0 for the first. -1 when it is not a playlist. */
-static int disc_index_in_playlist(const Game *g, const char *key)
-{
-    if (str_icmp(path_ext(g->path), "m3u") != 0)
-        return -1;
-    FILE *f = fopen(g->path, "r");
-    if (!f)
-        return -1;
-    char tag[32], line[SwanStationPS5_PATH_MAX];
-    snprintf(tag, sizeof(tag), "[%s]", key);
-    int index = 0, found = -1;
-    while (found < 0 && fgets(line, sizeof(line), f))
-    {
-        line[strcspn(line, "\r\n")] = '\0';
-        if (!line[0] || line[0] == '#')
-            continue;
-        if (strstr(line, tag))
-            found = index;
-        ++index;
-    }
-    fclose(f);
-    return found;
-}
-
-/* The first game started in a session the disc daemon opened goes straight in: no animation, no click. Anything after
- * that, or in a session the player opened, plays as usual. */
-static bool daemon_direct_boot(void)
-{
-    static bool used;
-    if (used || !opened_by_daemon || plat_ticks_us() - app_started_us > 90000000u)
-        return false;
-    used = true;
-    return true;
-}
-
-/* Starts the game on the disc that was put in */
-static void play_from_disc(int game, const char *key)
-{
-    host_set_initial_disc(disc_index_in_playlist(&app.library.games[game], key));
-    if (!shelf_play_game(game, daemon_direct_boot()))
-        SwanStationPS5_log("disc: the game could not be started from the shelf");
-}
-
-/* what went wrong, in a box that stays until X */
-static const char *import_why(DiscImportState s)
-{
-    static const char *const WHY[] = {
-        [DI_NO_DRIVE] = "No CD drive was found. Plug the USB CD drive into the console and try again.",
-        [DI_NO_DISC] = "The CD drive has no disc ready. Put in a disc, wait for it to spin up and try again.",
-        [DI_NOT_PS1] = "This disc is not a PS1 game: its first track is not data or it has no readable volume. Nothing was installed.",
-        [DI_UNREADABLE] = "The disc has too many sectors that cannot be read, so the installation was stopped and what was copied was deleted. Clean the disc or try another copy.",
-        [DI_DRIVE_LOST] = "The disc or the drive was removed during the installation. What was copied was deleted.",
-        [DI_WRITE_FAILED] = "The game could not be written to the games folder. Check that there is free space and try again.",
-        [DI_STALLED] = "The installation was stopped: the CD drive did not read anything for 30 seconds. The disc may be dirty, scratched or badly burned. Clean it and try again; what was copied was deleted.",
-    };
-    return WHY[s];
-}
-
-/* Play from disc (the answer to a disc put in): the disc in the drive is read into memory and its game is on the
- * shelf, started by itself, for as long as the disc is in. It is a Game of its own (not in any folder): the library
- * gets it back after a rescan, and it goes when the disc is taken out (or, if it is being played, when that ends). */
-static const char *play_why(DiscImportState s)
-{
-    switch (s)
-    {
-    case DI_DRIVE_LOST: return "The disc or the drive was removed before the game could be read.";
-    case DI_WRITE_FAILED: return "There is not enough memory to read the disc.";
-    default: return import_why(s);
-    }
-}
-
-static void dg_make(void)
-{
-    const DiscId *id = discplay_id();
-    memset(&dg, 0, sizeof(dg));
-    str_copy(dg.title, sizeof(dg.title), id->title);
-    str_copy(dg.serial, sizeof(dg.serial), id->serial);
-    str_copy(dg.path, sizeof(dg.path), discplay_path());
-    str_copy(dg.folder, sizeof(dg.folder), "/discplay");
-    const char *base = strrchr(dg.path, '/');
-    str_copy(dg.disc_name, sizeof(dg.disc_name), base ? base + 1 : dg.path);
-    char *dot = strrchr(dg.disc_name, '.');
-    if (dot)
-        *dot = '\0';
-    if (dg.serial[0])
-        str_copy(dg.id, sizeof(dg.id), dg.serial);
-    else
-    {
-        size_t w = 0;
-        for (const char *p = dg.title; *p && w + 1 < sizeof(dg.id); ++p)
-            dg.id[w++] = isalnum((unsigned char)*p) ? *p : '_';
-        dg.id[w] = '\0';
-    }
-    dg.discs = 1;
-}
-
-static void dg_drop(void)
-{
-    SwanStationPS5_log("disc: '%s' is gone: its game leaves the library", dg.title);
-    library_remove_path(&app.library, dg.path);
-    discplay_stop();
-    dg_active = dg_gone = false;
-    shelf_library_changed();
-}
-
-/* Every frame: the disc read for the game is ready (start it), failed (say why) or went away (drop its game) */
-static void disc_play_frame(void)
-{
-    const DiscPlayState st = discplay_state();
-    if (st == DP_FAILED)
-    {
-        const DiscImportState why = discplay_error();
-        discplay_stop();
-        app_message_box(play_why(why));
-        return;
-    }
-    if (!dg_active && st == DP_READY && app.screen == SCREEN_LIBRARY && !app.game && shelf_idle() && !box_open &&
-        !SC.active)
-    {
-        dg_make();
-        char key[24];
-        str_copy(key, sizeof(key), discplay_id()->key);
-        dp_drop();
-        if (!library_add_game(&app.library, &dg))
-        {
-            discplay_stop();
-            return;
-        }
-        dg_active = true;
-        dg_gone = false;
-        dg_removed_mark = discwatch_removed();
-        app_restart_covers();
-        shelf_show_all();
-        SwanStationPS5_log("disc: '%s' (%s) is read into memory and starts from the disc", dg.title, key);
-        play_from_disc(app.library.count - 1, key);
-        return;
-    }
-    if (!dg_active)
-        return;
-    if (!dg_gone && (discwatch_removed() != dg_removed_mark || discplay_lost()))
-        dg_gone = true;
-    if (dg_gone && !app.game && app.screen == SCREEN_LIBRARY && shelf_idle() && !SC.active)
-        dg_drop();
-}
-
-/* The disc is being identified: the buttons stay out of the screens below, and a panel says so */
-static bool play_input(uint32_t *pressed)
-{
-    if (discplay_state() != DP_PREPARING)
-        return false;
-    *pressed = 0;
-    return true;
-}
-
-static void play_draw(void)
-{
-    if (discplay_state() != DP_PREPARING)
-        return;
-    const char *msg = tr("Reading the disc...");
-    float w = text_width(26, FONT_REGULAR, msg) + 96, h = 84;
-    float x = (plat_width() - w) * 0.5f, y = plat_height() - 300;
-    draw_rrect(x, y, w, h, TH_RADIUS_SMALL, 0xf0000000u | (TH_PILL & 0xffffffu));
-    text_draw(plat_width() * 0.5f, y + 28, 26, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, msg);
-}
-
-#define CANCEL_HOLD 2.0f /* seconds O is held to cancel an import, as to close the app */
-static float cancel_hold;
-
-static bool import_input(uint32_t *pressed)
-{
-    DiscImportState s = discimport_state();
-    if (s == DI_IDLE)
-        return false;
-    uint32_t was_pressed = *pressed;
-    *pressed = 0;
-    if (s == DI_RUNNING)
-    {
-        discimport_check_stall(); /* no progress for 30 seconds: it is given up and the next frame says why */
-        /* O: a tap only says how to cancel; holding it (like closing the app) cancels */
-        static bool armed;
-        const bool circle = (app.pads[app_nav_pad()].buttons & BIT(BTN_CIRCLE)) != 0;
-        if (was_pressed & BIT(BTN_CIRCLE))
-        {
-            armed = true;
-            app_toast("Hold {Circle} to cancel the installation.");
-        }
-        if (circle && armed)
-        {
-            cancel_hold += app.dt;
-            if (cancel_hold >= CANCEL_HOLD)
-            {
-                cancel_hold = 0.0f;
-                armed = false;
-                discimport_cancel();
-            }
-        }
-        else
-        {
-            cancel_hold = 0.0f;
-            armed = false;
-        }
-        return true;
-    }
-    cancel_hold = 0.0f;
-    char msg[160], key[24];
-    str_copy(key, sizeof(key), discimport_key());
-    disc_mark_handled(key); /* whatever happened, the same disc does not start it again by itself */
-    bool launch = auto_launch;
-    auto_launch = false;
-    switch (s)
-    {
-    case DI_OK: /* no notice: the game appears on the shelf, and starts by itself if a disc put in began this */
-        msg[0] = '\0';
-        dp_drop();
-        app_rescan();
-        break;
-    case DI_OK_INCOMPLETE:
-        snprintf(msg, sizeof(msg), tr("Installed with %d unreadable sectors: %s"), discimport_bad(), discimport_title());
-        dp_drop();
-        app_rescan();
-        break;
-    case DI_ALREADY:
-        snprintf(msg, sizeof(msg), tr("Already in your games: %s"), discimport_title());
-        dp_drop();
-        app_rescan();
-        break;
-    default: break;
-    }
-    if (s == DI_CANCELLED)
-    {
-        discimport_ack();
-        app_toast("Installation cancelled.");
-        return true;
-    }
-    if (s != DI_OK && s != DI_OK_INCOMPLETE && s != DI_ALREADY)
-    {
-        discimport_ack();
-        app_message_box(import_why(s));
-        return true;
-    }
-    discimport_ack();
-    if (msg[0])
-        app_toast_for(msg, 6.0f);
-    if (launch) /* a disc put in on the shelf: the game starts by itself once it is in */
-    {
-        int game = find_game_by_key(key);
-        if (game >= 0)
-            play_from_disc(game, key);
-    }
-    return true;
-}
-
-/* The disc daemon (payload/discd.c) and the app share the drive: the app writes the time into <root>/app-alive every
- * couple of seconds, so the daemon leaves the drive to it; and the daemon writes <root>/disc-busy while it installs a
- * disc without the app, so the app leaves it alone and keeps its hands off the half-written files. */
-static bool stamp_is_fresh(const char *name, int within)
-{
-    char path[SwanStationPS5_PATH_MAX];
-    path_join(path, sizeof(path), app.paths.root, name);
-    FILE *f = fopen(path, "r");
-    long long t = 0;
-    if (!f)
-        return false;
-    int got = fscanf(f, "%lld", &t);
-    fclose(f);
-    long long now = (long long)time(NULL);
-    return got == 1 && now >= t && now - t <= within;
-}
-
-static bool daemon_installing(void)
-{
-    return stamp_is_fresh("disc-busy", 10);
-}
-
-static void write_alive_stamp(void)
-{
-    static uint64_t last_us;
-    uint64_t now = plat_ticks_us();
-    if (last_us && now - last_us < 2000000)
-        return;
-    last_us = now;
-    char path[SwanStationPS5_PATH_MAX];
-    path_join(path, sizeof(path), app.paths.root, "app-alive");
-    FILE *f = fopen(path, "w");
-    if (f)
-    {
-        fprintf(f, "%lld\n", (long long)time(NULL));
-        fclose(f);
-    }
-}
-
-/* A disc put in the drive: one that is not in the library asks how to play it (from the disc, or copied first); one that
- * is there is shown on the shelf and asks whether to start it. Nothing starts by itself. */
-static struct
-{
-    bool open;
-    bool known;
-    int sel;
-    int game;
-    int removed_mark;
-    float t;
-    DiscId id;
-} dq;
-
-static int dp_index(void)
-{
-    if (!dp_active)
-        return -1;
-    for (int i = 0; i < app.library.count; ++i)
-        if (!strcmp(app.library.games[i].path, dp.path))
-            return i;
-    return -1;
-}
-
-static void dp_make(const DiscId *id)
-{
-    memset(&dp, 0, sizeof(dp));
-    str_copy(dp.title, sizeof(dp.title), id->title);
-    str_copy(dp.serial, sizeof(dp.serial), id->serial);
-    snprintf(dp.path, sizeof(dp.path), "/discpending/%s", id->key);
-    str_copy(dp.folder, sizeof(dp.folder), "/discpending");
-    str_copy(dp.disc_name, sizeof(dp.disc_name), id->key);
-    str_copy(dp.id, sizeof(dp.id), id->serial[0] ? id->serial : id->key);
-    dp.discs = 1;
-    dp_id = *id;
-}
-
-static void dp_drop(void)
-{
-    if (!dp_active)
-        return;
-    library_remove_path(&app.library, dp.path);
-    dp_active = dp_gone = false;
-    shelf_library_changed();
-}
-
-static void disc_ask_close(void)
-{
-    dq.open = false;
-}
-
-static void disc_ask_open(const DiscId *id, int game)
-{
-    memset(&dq, 0, sizeof(dq));
-    dq.open = true;
-    dq.known = game >= 0;
-    dq.game = game;
-    dq.id = *id;
-    dq.removed_mark = discwatch_removed();
-}
-
-/* X on the entry of a disc that is not in the library: the question again. True when the game was that entry. */
-bool app_disc_pending(int index)
-{
-    if (!dp_active || index < 0 || index >= app.library.count || strcmp(app.library.games[index].path, dp.path))
-        return false;
-    if (dq.open || discimport_state() != DI_IDLE || discplay_state() != DP_IDLE)
-        return true;
-    disc_ask_open(&dp_id, -1);
-    return true;
-}
-
-static bool disc_ask_input(uint32_t *pressed)
-{
-    if (!dq.open)
-        return false;
-    if (discwatch_removed() != dq.removed_mark)
-    {
-        disc_ask_close();
-        return false;
-    }
-    if (!dq.known && (*pressed & (BIT(BTN_LEFT) | BIT(BTN_RIGHT))))
-    {
-        dq.sel ^= 1;
-        sfx_play(SFX_CLICK);
-    }
-    else if (*pressed & BIT(BTN_CROSS))
-    {
-        const DiscId id = dq.id;
-        const bool known = dq.known;
-        const int sel = dq.sel;
-        disc_ask_close();
-        if (known)
-        {
-            int game = find_game_by_key(id.key);
-            if (game >= 0)
-            {
-                host_set_initial_disc(disc_index_in_playlist(&app.library.games[game], id.key));
-                if (!shelf_start_game(game))
-                    SwanStationPS5_log("disc: the game could not be started from the shelf");
-            }
-        }
-        else if (sel == 0)
-        {
-            if (!discplay_start())
-                SwanStationPS5_log("disc: the disc could not be read for playing");
-        }
-        else
-        {
-            char ext_games[SwanStationPS5_PATH_MAX];
-            auto_launch = discimport_start(app.global.install_to_ext && drives_ext_games(ext_games, sizeof(ext_games)) ? ext_games : app.paths.games);
-        }
-    }
-    else if (*pressed & BIT(BTN_CIRCLE))
-    {
-        disc_ask_close();
-        sfx_play(SFX_BACK);
-    }
-    *pressed = 0;
-    return true;
-}
-
-static void disc_ask_wrap(const char *m, float x, float y, float size, float width, uint32_t color)
-{
-    char line[256];
-    while (*m)
-    {
-        size_t best = 0, i = 0;
-        for (;;)
-        {
-            size_t j = i;
-            while (m[j] && m[j] != ' ')
-                ++j;
-            size_t n = j < sizeof(line) - 1 ? j : sizeof(line) - 1;
-            memcpy(line, m, n);
-            line[n] = '\0';
-            if (best > 0 && text_width(size, FONT_REGULAR, line) > width)
-                break;
-            best = n;
-            if (!m[j])
-                break;
-            i = j + 1;
-        }
-        if (best == 0)
-            best = strlen(m) < sizeof(line) - 1 ? strlen(m) : sizeof(line) - 1;
-        memcpy(line, m, best);
-        line[best] = '\0';
-        text_draw(x, y, size, FONT_REGULAR, color, ALIGN_CENTER, line);
-        y += size * 1.45f;
-        m += best;
-        while (*m == ' ')
-            ++m;
-    }
-}
-
-static void disc_ask_card(float x, float y, float w, float h, bool sel, const char *title, const char *l1, const char *l2, float a)
-{
-    draw_rrect(x, y, w, h, TH_RADIUS, argb_alpha(sel ? TH_ROW_SELECTED : TH_PILL, a));
-    if (sel)
-        draw_rrect_outline(x, y, w, h, TH_RADIUS, 3, argb_alpha(TH_FOCUS, a));
-    text_draw_fit(x + w * 0.5f, y + 22, 32, FONT_BOLD, argb_alpha(TH_TEXT, a), ALIGN_CENTER, w - 32, title);
-    text_draw_fit(x + w * 0.5f, y + 78, 24, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, a), ALIGN_CENTER, w - 32, l1);
-    text_draw_fit(x + w * 0.5f, y + 78 + 34, 24, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, a), ALIGN_CENTER, w - 32, l2);
-}
-
-static void disc_ask_draw(void)
-{
-    if (!dq.open)
-        return;
-    dq.t = fminf(dq.t + app.dt * 8.0f, 1.0f);
-    const float a = dq.t, w = 940, h = dq.known ? 540 : 640, pad = 48, cs = 190;
-    float x = (plat_width() - w) * 0.5f, y = (plat_height() - h) * 0.5f + (1.0f - a) * 24.0f;
-    draw_rect(0, 0, plat_width(), plat_height(), argb_alpha(0xa0000000u, a));
-    draw_rrect(x, y, w, h, TH_RADIUS, argb_alpha(TH_PILL_A(0xf8), a));
-
-    PlatTexture *cover = NULL;
-    const int cover_game = dq.known ? dq.game : dp_index();
-    if (cover_game >= 0 && cover_game < app.library.count)
-        cover = shelf_cover_or_none(cover_game);
-    else
-        cover = shelf_no_cover();
-    draw_rrect(x + pad, y + pad, cs, cs, TH_RADIUS_SMALL, argb_alpha(TH_DIVIDER, a));
-    if (cover)
-    {
-        int tw, th;
-        plat_texture_size(cover, &tw, &th);
-        float k = fminf(cs / (float)tw, cs / (float)th), dw = tw * k, dh = th * k;
-        plat_draw_texture(cover, x + pad + (cs - dw) * 0.5f, y + pad + (cs - dh) * 0.5f, dw, dh, argb_alpha(0xffffffffu, a), true);
-    }
-
-    const char *drive = tr("Disc in the drive");
-    const float ds = 22, is = 36;
-    float dw = text_width(ds, FONT_REGULAR, drive);
-    icon_draw(ICON_DISC, x + w - pad - dw - is - 10, y + pad - 4, is, argb_alpha(TH_FOCUS, a));
-    text_draw(x + w - pad, y + pad + 2, ds, FONT_REGULAR, argb_alpha(TH_HINT, a), ALIGN_RIGHT, drive);
-
-    const float tx = x + pad + cs + 32, tw = x + w - pad - tx;
-    text_draw_fit(tx, y + pad + 62, 38, FONT_BOLD, argb_alpha(TH_TEXT, a), ALIGN_LEFT, tw, dq.id.title);
-    if (dq.id.serial[0])
-        text_draw(tx, y + pad + 118, 22, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, a), ALIGN_LEFT, dq.id.serial);
-
-    float yy = y + pad + cs + 40;
-    const float hs = 28, gap = hs * 0.4f;
-    if (dq.known)
-    {
-        disc_ask_wrap(tr("This game is already in your games. Do you want to start it?"), x + w * 0.5f, yy, 30, w - 2 * pad,
-                      argb_alpha(TH_TEXT, a));
-        const char *yes = tr("Start"), *no = tr("Cancel");
-        const float gw1 = pad_glyph_width(GLYPH_CROSS, hs), gw2 = pad_glyph_width(GLYPH_CIRCLE, hs);
-        const float w1 = gw1 + gap + text_width(hs, FONT_BOLD, yes), w2 = gw2 + gap + text_width(hs, FONT_REGULAR, no);
-        const float space = 56, hy = y + h - pad - hs;
-        float hx = x + (w - (w1 + space + w2)) * 0.5f;
-        draw_pad_glyph(GLYPH_CROSS, hx + gw1 * 0.5f, hy + hs * 0.6f, hs);
-        text_draw(hx + gw1 + gap, hy, hs, FONT_BOLD, argb_alpha(TH_FOCUS, a), ALIGN_LEFT, yes);
-        hx += w1 + space;
-        draw_pad_glyph(GLYPH_CIRCLE, hx + gw2 * 0.5f, hy + hs * 0.6f, hs);
-        text_draw(hx + gw2 + gap, hy, hs, FONT_REGULAR, argb_alpha(TH_TEXT, a), ALIGN_LEFT, no);
-        return;
-    }
-    text_draw(x + w * 0.5f, yy, 28, FONT_REGULAR, argb_alpha(TH_TEXT, a), ALIGN_CENTER, tr("How do you want to play it?"));
-    const float cg = 24, cw = (w - 2 * pad - cg) * 0.5f, ch = 150, cy = yy + 46;
-    disc_ask_card(x + pad, cy, cw, ch, dq.sel == 0, tr("Play from disc"), tr("Starts right now."), tr("The disc stays in the drive."), a);
-    disc_ask_card(x + pad + cw + cg, cy, cw, ch, dq.sel == 1, tr("Copy to storage"), tr("A few minutes, then it plays."),
-                  tr("After that the disc can come out."), a);
-    const float fs = 24, hy = y + h - pad - fs;
-    const int dirs[2] = {GLYPH_LEFT, GLYPH_RIGHT};
-    const char *l1 = tr("Choose"), *l2 = tr("Select"), *l3 = tr("Cancel");
-    const float w1 = hint_combo_width(dirs, 2, l1, fs), w2 = pad_glyph_width(GLYPH_CROSS, fs) + fs * 0.35f + text_width(fs, FONT_REGULAR, l2),
-                w3 = pad_glyph_width(GLYPH_CIRCLE, fs) + fs * 0.35f + text_width(fs, FONT_REGULAR, l3), sp = 40;
-    float hx = x + (w - (w1 + w2 + w3 + 2 * sp)) * 0.5f;
-    hx += draw_hint_combo(hx, hy, dirs, 2, '/', l1, fs, argb_alpha(TH_HINT, a)) + sp;
-    hx += draw_hint(hx, hy, GLYPH_CROSS, l2, fs, argb_alpha(TH_HINT, a)) + sp;
-    draw_hint(hx, hy, GLYPH_CIRCLE, l3, fs, argb_alpha(TH_HINT, a));
-}
-
-/* Every frame: on the shelf, a disc newly put in the USB CD drive asks what to do with it */
-static void disc_auto_frame(void)
-{
-    write_alive_stamp();
-    if (dp_active && !dp_gone && discwatch_removed() != dp_removed_mark)
-        dp_gone = true;
-    if (dp_gone && !dq.open && !app.game && app.screen == SCREEN_LIBRARY && shelf_idle() && !SC.active)
-        dp_drop();
-    disc_play_frame();
-    const bool daemon_busy = daemon_installing();
-    discwatch_pause(daemon_busy); /* the daemon is at the drive */
-    if (daemon_busy)
-        return;
-    /* a disc taken out forgets that it was handled: put back, it asks again. One left in does not ask twice. */
-    static int removed_seen;
-    if (discwatch_removed() != removed_seen)
-    {
-        removed_seen = discwatch_removed();
-        handled_count = 0;
-    }
-    bool free_for_disc = app.screen == SCREEN_LIBRARY && !app.game && shelf_idle() && !dq.open &&
-                         discimport_state() == DI_IDLE && discplay_state() == DP_IDLE && !box_open && !SC.active;
-    discwatch_set_active(free_for_disc);
-    DiscId id;
-    if (!free_for_disc || !discwatch_take(&id) || disc_handled(id.key))
-        return;
-    disc_mark_handled(id.key);
-    int game = find_game_by_key(id.key);
-    const bool after = disc_after_game && plat_ticks_us() - app_started_us < 15000000u;
-    const bool ask = app.global.disc_ask && !after;
-    SwanStationPS5_log("disc: '%s' (%s) put in: %s", id.title, id.key, game >= 0 ? "it is in the library, asking whether to start it" : "asking how to play it");
-    if (game >= 0)
-        shelf_show_game(game);
-    else
-    {
-        dp_drop();
-        dp_make(&id);
-        if (library_add_game(&app.library, &dp))
-        {
-            dp_active = true;
-            dp_gone = false;
-            dp_removed_mark = discwatch_removed();
-            app_restart_covers();
-            shelf_show_all();
-            shelf_show_game(dp_index());
-        }
-    }
-    disc_after_game = false;
-    if (ask)
-        disc_ask_open(&id, game);
-}
-
-static void import_draw(void)
-{
-    static Eta eta;
-    static int eta_next;
-    static long eta_left_s;
-    static double eta_at;
-    const double now = SDL_GetTicks() / 1000.0;
-    if (discimport_state() != DI_RUNNING)
-    {
-        eta = (Eta){0};
-        eta_next = 0;
-        eta_left_s = -1;
-        return;
-    }
-    const char *title = discimport_title();
-    char msg[200];
-    if (title[0])
-        snprintf(msg, sizeof(msg), tr("Installing %s..."), title);
-    else
-        str_copy(msg, sizeof(msg), tr("Installing..."));
-    PlatTexture *cover = (PlatTexture *)discimport_cover();
-    if (!cover && discimport_cover_none())
-        cover = (PlatTexture *)shelf_no_cover(); /* as on the shelf: assets/nocover2.png */
-    /* a fixed size, so the card does not change while the disc is identified and the cover arrives */
-    const float ch = 200, cw = ch, text_w = 760;
-    float w = text_w + cw + 32 + 64, h = ch + 64;
-    float x = (plat_width() - w) * 0.5f, y = plat_height() - h - 140;
-    float p = discimport_permille() / 1000.0f;
-    char pct[16];
-    snprintf(pct, sizeof(pct), "%d%%", discimport_permille() / 10);
-    if (discimport_dumping() && title[0])
-    {
-        if (eta_next == 0)
-        {
-            eta.prev_time = now;
-            eta_next = 5;
-            eta_left_s = -1;
-        }
-        else if (discimport_permille() / 10 >= eta_next)
-        {
-            long l = eta_left(&eta, p, now, discimport_total_sectors());
-            if (l >= 0)
-            {
-                eta_left_s = l;
-                eta_at = now;
-            }
-            while (eta_next <= discimport_permille() / 10)
-                eta_next += 5;
-        }
-    }
-    draw_rrect(x, y, w, h, TH_RADIUS_SMALL, 0xf0000000u | (TH_PILL & 0xffffffu));
-    draw_rrect(x + 32, y + 32, cw, ch, TH_RADIUS_SMALL, TH_DIVIDER);
-    if (cover)
-    {
-        int tw, th;
-        plat_texture_size(cover, &tw, &th);
-        float k = fminf(cw / (float)tw, ch / (float)th), dw = tw * k, dh = th * k;
-        plat_draw_texture(cover, x + 32 + (cw - dw) * 0.5f, y + 32 + (ch - dh) * 0.5f, dw, dh, 0xffffffffu, true);
-    }
-    const float tx = x + 32 + cw + 32, tw_area = x + w - 32 - tx;
-    text_draw_fit(tx, y + 44, 30, FONT_BOLD, TH_TEXT, ALIGN_LEFT, tw_area, msg);
-    float bar_w = tw_area - 90;
-    draw_rrect(tx, y + 108, bar_w, 12, 6, TH_DIVIDER);
-    draw_rrect(tx, y + 108, fmaxf(12.0f, bar_w * fminf(p, 1.0f)), 12, 6, TH_FOCUS);
-    text_draw(tx + tw_area, y + 94, 26, FONT_REGULAR, TH_TEXT, ALIGN_RIGHT, pct);
-    if (eta_left_s >= 0)
-    {
-        long sec = (long)(eta_left_s - (now - eta_at) + 2) / 5 * 5;
-        char when[64];
-        if (sec < 5)
-            sec = 5;
-        if (sec >= 60)
-            snprintf(when, sizeof(when), tr("%ld min %ld s left"), sec / 60, sec % 60);
-        else
-            snprintf(when, sizeof(when), tr("%ld s left"), sec);
-        text_draw(tx, y + 138, 24, FONT_REGULAR, TH_TEXT_DIM, ALIGN_LEFT, when);
-    }
-    {
-        const char *games = discimport_games_dir();
-        char where[64], drive[24];
-        if (strncmp(games, "/mnt/", 5) == 0)
-        {
-            str_copy(drive, sizeof(drive), games);
-            char *slash = strchr(drive + 5, '/');
-            if (slash)
-                *slash = '\0';
-        }
-        else
-            str_copy(drive, sizeof(drive), "/data");
-        snprintf(where, sizeof(where), tr("Installing to: %s"), drive);
-        text_draw(tx, y + 172, 24, FONT_REGULAR, TH_TEXT_DIM, ALIGN_LEFT, where);
-    }
-    /* bottom right: how to cancel */
-    const char *cancel = tr("Cancel (hold)");
-    const float cancel_w = text_width(22, FONT_REGULAR, cancel);
-    text_draw(x + w - 32, y + h - 58, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_RIGHT, cancel);
-    draw_pad_glyph(GLYPH_CIRCLE, x + w - 32 - cancel_w - 26, y + h - 46, 28);
-    if (cancel_hold > 0.3f)
-    {
-        /* O held: a bar fills up to the cancel, as when closing the app */
-        const char *cmsg = tr("Keep holding to cancel the installation...");
-        float cwid = text_width(26, FONT_REGULAR, cmsg) + 96, chgt = 84;
-        float cx = (plat_width() - cwid) * 0.5f, cy = y - chgt - 24;
-        draw_rrect(cx, cy, cwid, chgt, TH_RADIUS_SMALL, 0xf0000000u | (TH_PILL & 0xffffffu));
-        text_draw(plat_width() * 0.5f, cy + 12, 26, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, cmsg);
-        draw_rrect(cx + 32, cy + 56, cwid - 64, 12, 6, TH_DIVIDER);
-        draw_rrect(cx + 32, cy + 56, fmaxf(12.0f, (cwid - 64) * fminf(cancel_hold / CANCEL_HOLD, 1.0f)), 12, 6,
-                   TH_DANGER);
-    }
-}
-
 static void crop_ratio_text(char *out, size_t size, float r)
 {
     static const struct
@@ -1925,7 +1173,6 @@ void app_start_game(int index, bool resume)
     play_rewind_reset();
     controls_start(g, &app.settings);
     app.play_seconds = 0;
-    host_set_gun(controls_gun_for(g, &app.settings));
     host_set_special(controls_special_for(g, &app.settings));
     {
         const GameInfo *info = gamedb_get(g->serial);
@@ -1968,7 +1215,7 @@ void app_start_game(int index, bool resume)
         char hint[200];
         snprintf(hint, sizeof(hint), "%s", tr(menu_combo_hint()));
         /* a DualShock: how to press its ANALOG button (the core's combo, Settings > Controls) */
-        if (app.settings.analog && !controls_special_for(g, &app.settings) && !controls_gun_active())
+        if (app.settings.analog && !controls_special_for(g, &app.settings))
         {
             static const char *const COMBOS[] = {
                 "{L1} + {R1} + {L3} + {R3}", "{L1} + {L2} + {R1} + {R2} + {Options} + {View button}",
@@ -2015,8 +1262,6 @@ void app_start_game(int index, bool resume)
         app_toast("Translation patch applied");
     if (resume)
         play_load_resume();
-    if (controls_gun_active())
-        app_toast("Light gun: point the controller at the screen, {R2} fires, {R3} re-centres");
     app.screen = SCREEN_GAME;
 }
 
@@ -2033,7 +1278,6 @@ void app_start_bios(void)
     play_rewind_reset();
     controls_start(&bios, &app.settings);
     app.play_seconds = 0;
-    host_set_gun(0);
     host_set_special(0);
     host_set_fixes(0, NULL);
     static const char *const boot_regions[] = {"NTSC-U", "NTSC-J", "PAL"};
@@ -2214,22 +1458,6 @@ static void draw_timer(void)
     float w = text_width(34, FONT_BOLD, "00:00:00.00") + 48;
     draw_rrect(40, 40, w, 64, TH_RADIUS_SMALL, TH_CARD_A(0xd0));
     text_draw(40 + w * 0.5f, 50, 34, FONT_BOLD, timer.running ? TH_TEXT : TH_GOLD, ALIGN_CENTER, text);
-}
-
-/* The Xbox controller light bars: per player, or the cover's colour. */
-static void update_lightbars(void)
-{
-    static const uint32_t players[SwanStationPS5_MAX_PADS] = {0x2050ff, 0xff2030, 0x20d040, 0xff40c0};
-    if (app.settings.lightbar == 0)
-        return;
-    uint32_t cover = app.game ? covers_color(app.game_index) & 0xffffff : 0;
-    for (int i = 0; i < SwanStationPS5_MAX_PADS; ++i)
-    {
-        uint32_t rgb = app.settings.lightbar == 2 && cover ? cover : players[i];
-        if (app.settings.lightbar == 3) /* red in analog mode, off in digital */
-            rgb = app.game && host_analog_mode(i) ? 0xff0000 : 0x000000;
-        plat_set_lightbar(i, rgb);
-    }
 }
 
 static float auto_since, auto_shown; /* auto-save: time since the last, and its icon */
@@ -2447,7 +1675,6 @@ static void game_screen(PadState *pads)
     }
     if (timer.running)
         timer.seconds += app.dt;
-    update_lightbars();
     static uint64_t emu_us, loops_since;
     static int emu_frames, loops;
     ++loops;
@@ -2564,7 +1791,6 @@ static void game_screen(PadState *pads)
     last_us = now;
 
     app_draw_game(255);
-    controls_draw();
     if (auto_shown > 0)
     {
         /* a quiet sign that an auto-save was written */
@@ -2730,6 +1956,7 @@ int main(int argc, char **argv)
                           app.paths.covers, app.paths.logs,   app.paths.cache};
     for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); ++i)
         make_dirs(dirs[i]);
+    bios_use_drive_dir();
     bios_choices_scan(app.paths.bios); /* before the settings are read: the BIOS options list the folder's files */
     char probe[SwanStationPS5_PATH_MAX];
     path_join(probe, sizeof(probe), app.paths.root, ".write-test");
@@ -2748,56 +1975,13 @@ int main(int argc, char **argv)
     extern int ps5_klog_capture_stderr(const char *prefix);
     ps5_klog_capture_stderr("");
 #endif
-    /* a second games folder on each extended storage, only when it is mounted */
+    /* the drives the system reports now: the games are looked for on every one */
     char found_drives[256];
     app.drive_count = drives_list(found_drives, sizeof(found_drives), -1);
-    for (int i = 0; i < app.drive_count; ++i)
+    for (int i = 0; i < app.drive_count && i < DRIVE_COUNT; ++i)
         drives_list(app.drive_text[i], sizeof(app.drive_text[i]), i);
     SwanStationPS5_log("drives found: %s", app.drive_count ? found_drives : "none");
-    const char *const *ext_drives = drive_paths;
-    for (int i = 0; i < DRIVE_EXT_COUNT; ++i)
-    {
-        struct stat ext;
-        char games[64];
-        snprintf(games, sizeof(games), "%s/SwanStation/games", ext_drives[i]);
-        if (!drive_usable(i))
-            SwanStationPS5_log("games folder %s: %s is not available", games, ext_drives[i]);
-        else if (stat(games, &ext) == 0)
-            SwanStationPS5_log("games folder %s: already exists", games);
-        else if (make_dirs(games))
-            SwanStationPS5_log("games folder %s: created successfully", games);
-        else
-            SwanStationPS5_log("games folder %s: could not be created (%s)", games, strerror(errno));
-    }
-    if (!stamp_is_fresh("disc-busy", 10)) /* the daemon may be writing a game right now */
-    {
-        discimport_cleanup(app.paths.games);
-        for (int i = 0; i < DRIVE_EXT_COUNT; ++i)
-        {
-            if (!drive_usable(i))
-                continue;
-            char ext_games[SwanStationPS5_PATH_MAX];
-            snprintf(ext_games, sizeof(ext_games), "%s/SwanStation/games", drive_paths[i]);
-            discimport_cleanup(ext_games);
-        }
-    }
     app_started_us = plat_ticks_us();
-    if (stamp_is_fresh("daemon-launch", 90))
-    {
-        opened_by_daemon = true;
-        char marker[SwanStationPS5_PATH_MAX];
-        path_join(marker, sizeof(marker), app.paths.root, "daemon-launch");
-        remove(marker);
-        SwanStationPS5_log("started by the disc daemon: no notice sounds for the first seconds");
-    }
-    if (stamp_is_fresh("open-library", 60))
-    {
-        char marker[SwanStationPS5_PATH_MAX];
-        path_join(marker, sizeof(marker), app.paths.root, "open-library");
-        remove(marker);
-        disc_after_game = true;
-        SwanStationPS5_log("started again after a game: the disc in the drive is shown on the shelf, with no question");
-    }
     SwanStationPS5_log("SwanStation %s starting, data root %s", SwanStationPS5_VERSION, app.paths.root);
     SwanStationPS5_log("screen: %s", plat_screen_info());
 #if defined(__PROSPERO__)
@@ -2809,7 +1993,6 @@ int main(int argc, char **argv)
               app.sandboxed ? app.sandbox_reason : "");
     SwanStationPS5_log("storage probe before unlock: %s", plat_sandbox_probe());
     vk_probe(app.paths.root); /* v2: proves the Vulkan driver runs; logs only */
-    app.unlock_setting = !plat_unlock_disabled();
 
     if (!app.storage_error[0])
         profiles_startup(); /* whose saves, settings and stats */
@@ -2828,17 +2011,6 @@ int main(int argc, char **argv)
     }
     config_load(&app.global, app.paths.config);
     app.settings = app.global;
-    {
-        char sbi_dir[SwanStationPS5_PATH_MAX];
-        path_join(sbi_dir, sizeof(sbi_dir), app.paths.cache, "nfs-sbi");
-        nfs_set_sbi_dir(sbi_dir);
-    }
-    if (app.global.nfs_shares[0])
-    {
-        char nfs_error[256];
-        if (!nfs_set_shares(app.global.nfs_shares, nfs_error, sizeof(nfs_error)))
-            SwanStationPS5_log("nfs: %s", nfs_error);
-    }
     i18n_set(app.global.language);
     theme_apply(app.global.theme);
     stats_load(app.paths.user);
@@ -2851,8 +2023,6 @@ int main(int argc, char **argv)
         gamedb_start(); /* DuckStation's game database, downloaded once */
     }
     remote_update(app.global.remote && !app.storage_error[0]);
-    if (app.global.update_check && !app.storage_error[0])
-        update_check();
     shelf_init(app.global.last_game);
     if (!app.storage_error[0])
         app_rescan();
@@ -2879,7 +2049,6 @@ int main(int argc, char **argv)
     PadState pads[SwanStationPS5_MAX_PADS];
     uint64_t last = plat_ticks_us();
     const uint64_t opened = last;
-    bool auto_update_tried = false;
     while (!quit)
     {
         uint64_t now = plat_ticks_us();
@@ -2888,21 +2057,12 @@ int main(int argc, char **argv)
             app.dt = 0.1f;
         last = now;
 
-        /* An update found at start installs by itself, once, a second after the app opened (or when found, if later) */
-        if (!auto_update_tried && update_state() == UPDATE_AVAILABLE && now - opened >= 1000000)
-        {
-            auto_update_tried = true;
-            app_toast_for("An update is available and will be installed on your next restart.", 4.0f);
-            update_install();
-        }
-
         plat_poll(pads, &quit);
         if (app.quit_requested)
             quit = true;
         memcpy(app.pads, pads, sizeof(app.pads));
         uint32_t pressed = nav_pressed(pads);
-        disc_auto_frame();
-        if (!question_input(&pressed) && !sbi_check_input(&pressed) && !disc_ask_input(&pressed) && !play_input(&pressed) && !import_input(&pressed))
+        if (!question_input(&pressed) && !sbi_check_input(&pressed))
             message_box_input(&pressed);
         /* the shelf and settings paint a full-screen backdrop: no clear needed */
         bool backdrop = app.screen == SCREEN_LIBRARY || (app.screen == SCREEN_SETTINGS && !app.game);
@@ -2914,10 +2074,6 @@ int main(int argc, char **argv)
         ps5_crash_step(screen_names[app.screen]);
         static enum Screen last_screen = SCREEN_LIBRARY;
         enum Screen this_screen = app.screen;
-        /* the lights the app sets (player colours, cover colour, analog mode) are only on inside a game */
-        if (!app.game && app.settings.lightbar != 0)
-            for (int i = 0; i < SwanStationPS5_MAX_PADS; ++i)
-                plat_set_lightbar(i, 0x000000);
         switch (app.screen)
         {
         case SCREEN_LIBRARY: shelf_screen(pressed); break;
@@ -2968,8 +2124,6 @@ int main(int argc, char **argv)
                     idle[i].buttons = 0;
                     idle[i].lx = idle[i].ly = idle[i].rx = idle[i].ry = 0;
                     idle[i].l2 = idle[i].r2 = 0;
-                    idle[i].touching = false;
-                    idle[i].mouse_dx = idle[i].mouse_dy = 0;
                 }
                 if (app.settings.manual_crop)
                 {
@@ -3037,67 +2191,6 @@ int main(int argc, char **argv)
             const bool nostalgia = app.game && app.global.nostalgia && app.screen == SCREEN_GAME;
             sfx_silence(nostalgia);
         }
-        {
-            static const int nfs_seconds[] = {5, 10, 15, 20, 30};
-            static bool nfs_told;
-            nfs_set_read_timeout(nfs_seconds[app.global.nfs_timeout >= 0 && app.global.nfs_timeout < 5 ? app.global.nfs_timeout : 2]);
-            const bool again = nfs_reconnecting() && app.game;
-            if (again && !nfs_told)
-                app_toast("Reconnecting to the NFS server.");
-            nfs_told = again;
-        }
-        if (nfs_connection_lost() && app.game)
-        {
-            app_stop_game();
-            app_toast("NFS communication was lost.");
-            app_rescan();
-        }
-        if (ntfsfs_connection_lost() && app.game)
-        {
-            app_stop_game();
-            app_toast("The NTFS disk was disconnected.");
-            app_rescan();
-        }
-        if (nfs_mount_finished() && !app.game)
-        {
-            nfs_rescan_from_mount = true;
-            app_rescan();
-            nfs_rescan_from_mount = false;
-            if (nfs_notify)
-            {
-                nfs_notify = false;
-                char detail[400], message[500];
-                const int why = nfs_first_failure(detail, sizeof(detail));
-                switch (why)
-                {
-                case NFS_FAIL_NONE: app_toast("NFS share connected."); break;
-                case NFS_FAIL_NO_ANSWER: app_toast_for(tr("NFS share not connected: the server did not answer."), 6.0f); break;
-                case NFS_FAIL_REFUSED: app_toast_for(tr("NFS share not connected: the server refused the mount."), 6.0f); break;
-                case NFS_FAIL_NO_FOLDER: app_toast_for(tr("NFS share not connected: the folder is not on the server."), 6.0f); break;
-                case NFS_FAIL_CONNECT:
-                    app_toast_for(tr("NFS share not connected: the connection was refused or could not be made."), 6.0f);
-                    break;
-                case NFS_FAIL_CLOSED:
-                    app_toast_for(tr("NFS share not connected: the server closed the connection."), 6.0f);
-                    break;
-                case NFS_FAIL_NAME:
-                    app_toast_for(tr("NFS share not connected: the server's name could not be found."), 6.0f);
-                    break;
-                case NFS_FAIL_DENIED:
-                    app_toast_for(tr("NFS share not connected: the server denies access to this console."), 6.0f);
-                    break;
-                case NFS_FAIL_NOT_EXPORTED:
-                    snprintf(message, sizeof(message), "%s %.300s",
-                             tr("NFS share not connected: that folder is not exported by the server. It exports:"), detail);
-                    app_toast_for(message, 8.0f);
-                    break;
-                default:
-                    snprintf(message, sizeof(message), "%s %.300s", tr("NFS share not connected:"), detail);
-                    app_toast_for(message, 6.0f);
-                    break;
-                }
-            }
-        }
         if (cheats_fetch_finished() && app.game && !ra_hardcore() &&
             cheats_load(&app.cheats, app.game, app.paths.cheats))
         {
@@ -3110,9 +2203,6 @@ int main(int argc, char **argv)
             ra_idle();
         draw_achievement();
         sbi_check_draw();
-        play_draw();
-        import_draw();
-        disc_ask_draw();
         message_box_draw();
         question_draw();
         toast_render();

@@ -219,11 +219,6 @@ extern "C" const char *plat_pad_name(int port)
     return name[i];
 }
 
-/* The Xbox controller has no motion sensor, touchpad, light bar or adaptive triggers */
-extern "C" void plat_pad_motion(bool) {}
-extern "C" void plat_pad_touch(bool) {}
-extern "C" void plat_pad_triggers(int, PlatTrigger, PlatTrigger) {}
-extern "C" void plat_set_lightbar(int, uint32_t) {}
 
 extern "C" int plat_pad_battery(int port)
 {

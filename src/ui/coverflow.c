@@ -21,7 +21,6 @@
 #include "../ra/achievements.h"
 #include "../stats.h"
 #include "../tips.h"
-#include "../update.h"
 #include "case3d.h"
 #include "draw.h"
 #include "icons.h"
@@ -874,17 +873,6 @@ static void draw_header(void)
     float rx = plat_width() - TH_MARGIN;
     text_draw(rx, 53 + dy, 24, FONT_REGULAR, TH_TEXT_SOFT, ALIGN_RIGHT, clock_text);
     rx -= text_width(24, FONT_REGULAR, clock_text) + 32;
-    if (update_state() == UPDATE_AVAILABLE || update_state() == UPDATE_INSTALLED)
-    {
-        char up[64];
-        snprintf(up, sizeof(up), tr(update_state() == UPDATE_INSTALLED ? "Restart for %s" : "Update %s"),
-                 update_version());
-        float uw = text_width(20, FONT_BOLD, up) + 64;
-        draw_rrect(rx - uw, 44 + dy, uw, 46, 23, 0xff2a2410u);
-        icon_draw(ICON_DOWNLOAD, rx - uw + 14, 52 + dy, 30, TH_GOLD);
-        text_draw(rx - uw + 50, 56 + dy, 20, FONT_BOLD, TH_GOLD, ALIGN_LEFT, up);
-        rx -= uw + 24;
-    }
     if (profiles_count() > 1)
     {
         const char *name = profiles_name(profiles_current());
@@ -1450,8 +1438,6 @@ static bool start_black; /* the frame in which the game starts: all black, with 
  * it starts from the beginning, with no Continue box. `silent`: without the click of the button press. */
 static void play_game(int game, bool ask, bool silent)
 {
-    if (ask && app_disc_pending(game))
-        return;
     const Game *g = &app.library.games[game];
     S.details = false;
     if (ask && app.global.quick_resume && !ra_hardcore() && play_has_resume(g, &S.resume_age))

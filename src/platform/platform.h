@@ -29,32 +29,11 @@ void plat_default_root(char *out, size_t size);
 /* Reads controllers. `quit` is set when the desktop window is closed. */
 void plat_poll(PadState pads[SwanStationPS5_MAX_PADS], bool *quit);
 void plat_rumble(int port, uint16_t strong, uint16_t weak);
-/* The controller's light bar, 0xRRGGBB (ignored where unsupported). */
-void plat_set_lightbar(int port, uint32_t rgb);
 /* Players: order[player] is the controller that plays it. Ports everywhere
- * (plat_poll, rumble, light bar, triggers) are players. */
+ * (plat_poll, rumble) are players. */
 void plat_set_player_order(const int order[SwanStationPS5_MAX_PADS]);
 void plat_player_order(int order[SwanStationPS5_MAX_PADS]);
 const char *plat_pad_name(int port); /* the Xbox user holding it, or the controller's name */
-/* Xbox controller extras; nothing happens where they aren't supported */
-void plat_pad_motion(bool on); /* PadState.quat while on */
-void plat_pad_touch(bool on);  /* PadState.touching / touch_x / touch_y while on */
-typedef struct
-{
-    uint8_t mode;     /* TRIGGER_* (Sony's trigger effect modes) */
-    uint8_t data[11]; /* feedback: position 0-9, strength 0-8; weapon: start 2-7, end, strength;
-                         vibration: position, amplitude 0-8, frequency Hz; slope: start, end,
-                         start strength 1-8, end strength 1-8; steps: strength 0-8 for each of
-                         10 zones; steps vibration: frequency Hz, then amplitude 0-8 per zone */
-} PlatTrigger;
-enum
-{
-    TRIGGER_OFF = 0,
-    TRIGGER_FEEDBACK = 1,
-    TRIGGER_WEAPON = 2,
-    TRIGGER_VIBRATION = 3
-};
-void plat_pad_triggers(int port, PlatTrigger l2, PlatTrigger r2);
 int plat_pad_battery(int port); /* 0..100, -1 when unknown */
 /* The game picture's colours: Settings brightness (0..3, 1 normal), colour (0..5),
  * and sharpening (0..2). */

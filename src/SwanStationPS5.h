@@ -51,15 +51,6 @@ typedef struct
     uint32_t buttons;
     int16_t lx, ly, rx, ry;
     uint8_t l2, r2;    /* how far the triggers are pressed, 0..255 */
-    bool motion;       /* quat holds the controller's orientation */
-    float quat[4];     /* x, y, z, w */
-    /* the light gun (filled in by SwanStation): -32767..32767 across the picture */
-    int16_t gun_x, gun_y;
-    bool gun_offscreen;
-    /* the View button (one finger) and, for mouse games, the pointer's move this frame */
-    bool touching;
-    uint16_t touch_x, touch_y; /* 0..1919, 0..1079 */
-    int16_t mouse_dx, mouse_dy;
 } PadState;
 
 enum UpscaleFilter
@@ -116,7 +107,6 @@ typedef struct
     int crt;              /* scanlines: 0 off, 1 light, 2 strong */
     int border;           /* around the picture: 0 black, 1 glow, 2 TV frame */
     bool remote;          /* settings page for phones on the local network */
-    bool update_check;    /* look for new SwanStation releases at start */
     bool pgxp;            /* precise geometry, no wobbling polygons */
     int shader;           /* 0 off, 1 LCD3x, 2 CRT Royale Fast, 3 and 4 retired, 5 to 8 NTSC, 9 to 12 CRT Lottes, CRT Pi, 11 retired, zfast LCD, 13 to 16 CRT Royale, Newpixie, Hyllian NTSC, Mattias */
     bool hd_textures;     /* use a texture pack beside the game when there is one */
@@ -129,13 +119,10 @@ typedef struct
     bool ra_tracker;      /* the progress card when a counted achievement moves */
     int ra_popup_style;   /* 0 banner, 1 compact, 2 big trophy */
     int bios_start;       /* Start BIOS boots this region's BIOS: 0 NTSC-U (default), 1 NTSC-J, 2 PAL; not saved */
-    int lightbar;         /* 0 left to the system, 1 player colours, 2 the game's cover colour, 3 red in analog mode / off in digital */
     int stick_deadzone;   /* 0 off, 1..4: 5, 10, 15, 20 % of the stick's travel ignored */
     int stick_response;   /* 0 normal, 1 precise (slow near the centre), 2 quick */
-    int trigger_effects;  /* Xbox controller triggers: 0 off, 1 automatic (pedal / gun click), then one feel for every game: click, light click, firm, buzz */
     bool racing_triggers; /* R2 and Cross swap places, and L2 and Square (off by default) */
     int rumble_feel;      /* 0 classic, 1 soft, 2 punchy, 3 punchy and in the triggers */
-    int lightgun;         /* 0 automatic (known gun games), 1 off, 2 on */
     int overclock;        /* 0 off, 1 a little, 2 a lot */
     int brightness;       /* 0 darker, 1 normal, 2 brighter, 3 brightest */
     int colour;           /* 0 natural, 1 vivid, 2 soft, 3 warm, 4 cool, 5 black and white */
@@ -154,19 +141,13 @@ typedef struct
     int sharpen;          /* 0 off, 1 light, 2 strong (AMD FidelityFX CAS) */
     bool disc_in_tray;    /* the disc spins flat on its tray, without lifting or growing, as in 1.3.7 */
     bool disc_animation;  /* the disc slides out of its case when a game starts */
-    bool disc_ask; /* a disc put in opens its question by itself; off: only when the game is pressed on the shelf */
-    bool ntfs_enabled; /* the NTFS disks plugged in are listed under /ntfs and their games on the shelf */
-    bool install_to_ext; /* a disc is installed on the first extended storage with room (1 GB free) instead of /data */
     bool case_lighting;   /* the cover in the jewel case gets light: its shading and the glare over the lid; off: the picture as it is */
     bool jewel_cases;     /* the shelf shows 3D jewel cases; off: the flat covers with a reflection, as in 1.1.8 */
     bool negcon;          /* racing games that take a NeGcon: analog gas and brake on R2 / L2 */
-    bool touch_mouse;     /* mouse games: the View button moves the pointer */
     int run_ahead;        /* 0 off, 1 to 10 frames less input lag */
     bool fast_effects;    /* screen effects on the GPU, without the software copy */
     bool fsr;             /* FSR 1 scales the picture before the shader */
     char usb_folder[48];  /* a folder name looked for on USB drives: /mnt/ext0/<name>, /mnt/ext1/<name> and /mnt/usb0/<name> to /mnt/usb7/<name> (empty: none) */
-    int nfs_timeout;  /* how long an NFS read may take before the connection is given up: 0..4 = 5, 10, 15, 20, 30 s (2 default) */
-    char nfs_shares[512]; /* nfs:// addresses of the servers that hold games, ';' between them (empty: none); src/nfs/nfs.h */
     bool nostalgia;       /* while a game is played: no sound of the app, no notices or trophies, and the game is silent */
     bool frame_pacing;    /* Video sync: one game frame per screen refresh, the sound stretched by a hair to keep up; off: synchronised to the sound */
     int video_out;        /* picture output to the TV: 0 60 Hz, 1 120 Hz (from the next start) */

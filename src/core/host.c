@@ -510,12 +510,6 @@ static void RETRO_CALLCONV core_log(enum retro_log_level level, const char *fmt,
 }
 
 static float rumble_scale = 1.0f; /* Settings > Controls > Vibration */
-static int gun_device;           /* 0 a pad, 1 GunCon, 2 Justifier in port 1 */
-
-void host_set_gun(int device)
-{
-    gun_device = device;
-}
 
 static bool analog_on[4]; /* each controller's mode, from the core's messages ("Controller 1 switched to analog mode.") */
 
@@ -524,7 +518,7 @@ bool host_analog_mode(int port)
     return port >= 0 && port < 4 && analog_on[port];
 }
 
-static int special_device; /* 0 pads, 1 NeGcon in every port, 2 a mouse in port 1 */
+static int special_device; /* 0 pads, 1 NeGcon in every port */
 
 void host_set_special(int device)
 {
@@ -973,30 +967,6 @@ static int16_t RETRO_CALLCONV input_state_cb(unsigned port, unsigned device, uns
             return id < 16 && ((p->buttons >> id) & 1) ? 0x7fff : 0;
         }
         return 0;
-    case RETRO_DEVICE_MOUSE:
-        switch (id)
-        {
-        case RETRO_DEVICE_ID_MOUSE_X: return p->mouse_dx;
-        case RETRO_DEVICE_ID_MOUSE_Y: return p->mouse_dy;
-        case RETRO_DEVICE_ID_MOUSE_LEFT: return ((p->buttons >> BTN_R2) | (p->buttons >> BTN_CROSS)) & 1;
-        case RETRO_DEVICE_ID_MOUSE_RIGHT: return ((p->buttons >> BTN_L2) | (p->buttons >> BTN_CIRCLE)) & 1;
-        default: return 0;
-        }
-    case RETRO_DEVICE_LIGHTGUN:
-        /* the controller as a gun: aimed by SwanStation (controls.c), R2 fires,
-         * L2 or Square reloads (a shot off the screen), Cross / Circle are A / B */
-        switch (id)
-        {
-        case RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X: return p->gun_x;
-        case RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y: return p->gun_y;
-        case RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN: return p->gun_offscreen;
-        case RETRO_DEVICE_ID_LIGHTGUN_TRIGGER: return (p->buttons >> BTN_R2) & 1;
-        case RETRO_DEVICE_ID_LIGHTGUN_RELOAD: return ((p->buttons >> BTN_L2) | (p->buttons >> BTN_SQUARE)) & 1;
-        case RETRO_DEVICE_ID_LIGHTGUN_AUX_A: return (p->buttons >> BTN_CROSS) & 1;
-        case RETRO_DEVICE_ID_LIGHTGUN_AUX_B: return (p->buttons >> BTN_CIRCLE) & 1;
-        case RETRO_DEVICE_ID_LIGHTGUN_START: return (p->buttons >> BTN_START) & 1;
-        default: return 0;
-        }
     default:
         return 0;
     }
@@ -1337,7 +1307,7 @@ void host_reset(void)
         core->reset();
 }
 
-/* Which controller is in each port: the DualShock or digital pad, then a NeGcon, a mouse or a light gun
+/* Which controller is in each port: the DualShock or digital pad, then a NeGcon
  * over it. Also while a game runs: the core builds the controllers again on the next frame. */
 static void apply_devices_for(bool analog)
 {
@@ -1347,20 +1317,12 @@ static void apply_devices_for(bool analog)
                                        : RETRO_DEVICE_JOYPAD;
     for (unsigned port = 0; port < (multitap ? 4u : 2u); ++port)
         core->set_controller_port_device(port, device);
-    /* NeGcon Rumble (analog subclass 3) in every port, or a mouse in port 1 */
+    /* NeGcon Rumble (analog subclass 3) in every port */
     if (special_device == 1)
         for (unsigned port = 0; port < (multitap ? 4u : 2u); ++port)
             core->set_controller_port_device(port, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 3));
-    if (special_device == 2)
-        core->set_controller_port_device(0, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_MOUSE, 0));
     if (special_device)
-        SwanStationPS5_log("host: %s", special_device == 1 ? "NeGcon in each port" : "a mouse in port 1");
-    /* a light gun in port 1: GunCon is subclass 0, the Justifier 1, in both cores */
-    if (gun_device)
-    {
-        core->set_controller_port_device(0, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_LIGHTGUN, gun_device - 1));
-        SwanStationPS5_log("host: port 1 is a %s", gun_device == 1 ? "GunCon" : "Justifier");
-    }
+        SwanStationPS5_log("host: NeGcon in each port");
 }
 
 static void apply_devices(const Settings *settings)

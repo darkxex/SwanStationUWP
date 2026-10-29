@@ -117,3 +117,71 @@ diff --git a/src/core/cpu_code_cache.cpp b/src/core/cpu_code_cache.cpp
  
      AllocateFastMap();
      CompileDispatcher();
+diff --git a/dep/libretro-common/compat/fopen_utf8.c b/dep/libretro-common/compat/fopen_utf8.c
+--- a/dep/libretro-common/compat/fopen_utf8.c
++++ b/dep/libretro-common/compat/fopen_utf8.c
+@@ -26,6 +26,7 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <boolean.h>
++#include <retro_environment.h> /* defines __WINRT__ on a UWP app */
+ #if defined(__WINRT__)
+ #include <stdint.h>
+ #include <windows.h>
+diff --git a/dep/libretro-common/vfs/vfs_implementation.c b/dep/libretro-common/vfs/vfs_implementation.c
+--- a/dep/libretro-common/vfs/vfs_implementation.c
++++ b/dep/libretro-common/vfs/vfs_implementation.c
+@@ -199,6 +199,14 @@
+ #include <encodings/utf.h>
+ #include <compat/fopen_utf8.h>
+ #include <file/file_path.h>
++
++#if defined(_WIN32) && defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
++/* UWP (an Xbox in developer mode): outside the app's own folders, only the *FromApp calls see a drive the user
++ * gave file access to; stat and the folder listing go through them. */
++#include <windows.h>
++#include <fileapifromapp.h>
++#define VFS_UWP 1
++#endif
+ 
+ #ifdef HAVE_CDROM
+ #include <vfs/vfs_implementation_cdrom.h>
+@@ -1545,6 +1553,25 @@
+    if (!path_wide)
+       return 0;
+ 
++#ifdef VFS_UWP
++   {
++      WIN32_FILE_ATTRIBUTE_DATA attr;
++
++      if (!GetFileAttributesExFromAppW(path_wide, GetFileExInfoStandard, &attr))
++      {
++         free(path_wide);
++         return 0;
++      }
++      *file_info         = attr.dwFileAttributes;
++      memset(stat_buf, 0, sizeof(*stat_buf));
++      stat_buf->st_mode  = (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? (_S_IFDIR | 0777) : (_S_IFREG | 0666);
++      stat_buf->st_nlink = 1;
++      stat_buf->st_size  = (((int64_t)attr.nFileSizeHigh) << 32) | attr.nFileSizeLow;
++      free(path_wide);
++      return 1;
++   }
++#endif
++
+    *file_info         = GetFileAttributesW(path_wide);
+ 
+    if (     *file_info == INVALID_FILE_ATTRIBUTES
+@@ -2010,7 +2037,12 @@
+       free(path_local);
+ #else
+    path_wide               = utf8_to_utf16_string_alloc(path_buf);
++#ifdef VFS_UWP
++   rdir->directory         = FindFirstFileExFromAppW(path_wide, FindExInfoBasic, &rdir->entry,
++         FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
++#else
+    rdir->directory         = FindFirstFileW(path_wide, &rdir->entry);
++#endif
+    if (path_wide)
+       free(path_wide);
+ #endif

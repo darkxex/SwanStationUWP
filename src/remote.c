@@ -19,7 +19,6 @@
 #include "remote.h"
 
 #include "app.h"
-#include "discimport.h"
 #include "ra/achievements.h"
 #include "ra/login.h"
 #include "ui/coverflow.h"
@@ -577,14 +576,6 @@ static void serve(int fd)
     char method[8] = "", path[512] = "";
     if (sscanf(req, "%7s %511s", method, path) != 2)
         return;
-    /* a disc is being installed: nothing the phone sends changes anything (settings, cards, saves, sign-in) until
-     * it is done; reading still works */
-    if (strcmp(method, "GET") != 0 && discimport_state() == DI_RUNNING)
-    {
-        static const char busy[] = "{\"ok\":false,\"error\":\"installing a disc\"}";
-        respond(fd, "503 Service Unavailable", "application/json", busy, sizeof(busy) - 1);
-        return;
-    }
     if (!strcmp(path, "/") || !strcmp(path, "/index.html"))
     {
         size_t len;

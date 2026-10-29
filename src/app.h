@@ -44,10 +44,9 @@ typedef struct
     bool settings_preview;    /* Settings opened from a game: the View button hides it and the game runs, to see the changes live */
     float settings_preview_time; /* seconds since the preview began (its notice fades out) */
     char storage_error[256];
-    char drive_text[10][40]; /* the drives found when the app started, with their free space */
+    char drive_text[26][40]; /* the drives found when the app started, with their free space */
     int drive_count;
     bool sandboxed;           /* /data can't be listed: library.txt is the library */
-    bool unlock_setting;      /* Settings > System > Unlock /data with etaHEN */
     char sandbox_reason[200];
     float dt;                 /* seconds since the last frame */
     float fps;                /* emulated frames per second */
@@ -60,7 +59,6 @@ typedef struct
 extern App app;
 
 void app_toast(const char *message); /* translated, shown for 2.5 s */
-void app_nfs_notify(void); /* the next NFS mount says in a notice how it went */
 void app_toast_for(const char *message, float seconds); /* the same, for a chosen time */
 void app_draw_toast(void);
 /* A message in a square box in the middle of the screen, over whatever screen is up. It stays until X is pressed. */
@@ -77,7 +75,6 @@ int app_nav_pad(void);
 /* resume: continue from the quick-resume save */
 void app_start_game(int index, bool resume);
 /* X on a game that stands for a disc in the drive not in the library yet: asks about it again (true: nothing else starts) */
-bool app_disc_pending(int index);
 /* Boots the console's BIOS with no disc (Settings > About > Start BIOS) */
 void app_start_bios(void);
 void app_stop_game(void);

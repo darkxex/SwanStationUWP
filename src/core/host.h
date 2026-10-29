@@ -20,13 +20,11 @@ const char *host_core_name(void);
 const char *host_emulator_for(const Settings *settings, const char *serial);
 
 void host_set_pads(const PadState pads[SwanStationPS5_MAX_PADS]);
-/* Port 1's device for the next host_load: 0 a pad, 1 GunCon, 2 Justifier. */
-void host_set_gun(int device);
 /* The console region the core is told while a BIOS starts with no disc ("NTSC-U", "NTSC-J", "PAL"); NULL for the settings' own. */
 void host_set_region_override(const char *region);
 /* The disc of a multi-disc game the next host_load starts on (0 is the first); -1 leaves it to the saved one. */
 void host_set_initial_disc(int index);
-/* Other controllers for the next host_load: 0 pads, 1 NeGcon in every port, 2 a mouse in port 1. */
+/* Other controllers for the next host_load: 0 pads, 1 NeGcon in every port. */
 void host_set_special(int device);
 bool host_analog_mode(int port); /* the controller in this port is in analog mode (the core said so) */
 void host_apply_devices(const Settings *settings); /* the controller types, while a game runs */

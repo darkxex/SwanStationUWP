@@ -24,6 +24,8 @@ typedef struct DIR DIR;
 DIR *opendir(const char *path);
 struct dirent *readdir(DIR *dir);
 int closedir(DIR *dir);
+/* The Windows error of the last opendir that failed (5 access denied, 3 path not found...). */
+unsigned uwp_opendir_error(void);
 
 #ifdef __cplusplus
 }

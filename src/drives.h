@@ -1,7 +1,10 @@
 /*
- * SwanStationUWP - the drives a games folder is looked for on. On the console the USB drives and the extended storage
- * show up as drive letters; a UWP app sees one only if the user gave it access, so a letter that is not there is simply
- * left out. Games are looked for in <letter>:/<Games folder>, as "psx" by default.
+ * SwanStationUWP - the drives a games folder is looked for on. Every drive letter Windows reports is looked at, as
+ * RetroArch's UWP build lists them (GetLogicalDrives): on a console a USB drive or the extended storage gets whatever
+ * letter the system gives it. A UWP app can read one only where the user allowed file access to it (Settings > Privacy
+ * > File system), and a drive it cannot read just has nothing found on it.
+ * Games are looked for in <letter>:/SwanStation, <letter>:/SwanStation/games and <letter>:/<Games folder>, "psx" by
+ * default.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_DRIVES_H
@@ -11,16 +14,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
-#include <sys/stat.h>
 #include <windows.h>
 
-#define DRIVE_EXT_COUNT 0 /* nothing here is storage the app may install to without asking */
-#define DRIVE_USB_COUNT 8
-#define DRIVE_COUNT (DRIVE_EXT_COUNT + DRIVE_USB_COUNT)
-#define DRIVE_PREFIX_LEN 0 /* characters of a path that are not its name */
+#define DRIVE_COUNT 26 /* A: to Z: */
 
-static const char *const drive_paths[DRIVE_COUNT] = {"D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:"};
+/* The drive letters that are there now, as "X:": how many, and in paths[] (4 bytes each). */
+static inline int drives_present(char paths[DRIVE_COUNT][4])
+{
+    const DWORD mask = GetLogicalDrives();
+    int n = 0;
+    for (int i = 0; i < DRIVE_COUNT; ++i)
+        if (mask & (1u << i))
+        {
+            paths[n][0] = (char)('A' + i);
+            paths[n][1] = ':';
+            paths[n][2] = '\0';
+            ++n;
+        }
+    return n;
+}
 
+/* Free space of a drive in MB, -1 when it cannot be asked (no access, no disk). */
 static inline long long drive_free_mb(const char *path)
 {
     wchar_t root[8];
@@ -33,42 +47,33 @@ static inline long long drive_free_mb(const char *path)
     return (long long)(avail.QuadPart >> 20);
 }
 
-static inline bool drive_usable(int d)
-{
-    return drive_free_mb(drive_paths[d]) >= 256;
-}
-
+/* The drives with their free space as text: "F: 28.2 GB". `only` < 0: all of them, separated by commas; else the one
+ * at that position. Returns how many drives it found. A drive whose space cannot be asked is still listed. */
 static inline int drives_list(char *buf, size_t size, int only)
 {
-    int found = 0;
+    char paths[DRIVE_COUNT][4];
+    const int total = drives_present(paths);
     size_t len = 0;
     if (size)
         buf[0] = '\0';
-    for (int d = 0; d < DRIVE_COUNT; ++d)
+    for (int d = 0; d < total; ++d)
     {
-        if (!drive_usable(d))
+        if (only >= 0 && d != only)
             continue;
-        long long free_mb = drive_free_mb(drive_paths[d]);
-        if (only >= 0 && found++ != only)
-            continue;
-        const char *name = drive_paths[d] + DRIVE_PREFIX_LEN;
-        int n = snprintf(buf + len, size - len, "%s%s %lld.%lld GB", only < 0 && len ? ", " : "", name, free_mb >> 10,
+        const long long free_mb = drive_free_mb(paths[d]);
+        int n;
+        if (free_mb >= 0)
+            n = snprintf(buf + len, size - len, "%s%s %lld.%lld GB", only < 0 && len ? ", " : "", paths[d], free_mb >> 10,
                          (free_mb & 1023) * 10 >> 10);
+        else
+            n = snprintf(buf + len, size - len, "%s%s", only < 0 && len ? ", " : "", paths[d]);
         if (n < 0 || (size_t)n >= size - len)
             break;
         len += (size_t)n;
         if (only >= 0)
             break;
-        ++found;
     }
-    return found;
-}
-
-/* Installing a disc to extended storage: there is none here, discs are not read (no disc drive in a UWP app) */
-static inline bool drives_ext_games(char *out, size_t size)
-{
-    (void)out, (void)size;
-    return false;
+    return total;
 }
 
 #endif

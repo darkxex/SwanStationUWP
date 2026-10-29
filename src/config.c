@@ -19,14 +19,12 @@ void config_defaults(Settings *s)
     s->smooth = false; /* sharp pixels; "Smooth final scaling" is opt-in */
     s->internal_res = 9; /* 9x (4K) */
     s->cd_speed = 1;
-    s->nfs_timeout = 2;
     s->frame_pacing = true; /* Video sync */
     s->true_colour = true; /* True Color is on by default */
     s->upscale = 2;
     s->upscale_filter = UPSCALE_XBR;
     s->region = REGION_AUTO;
     s->dithering = true;
-    s->lightgun = 1; /* Off */
     s->analog = true; /* DualShock: it starts in digital mode, so digital-only games still work */
     s->boot_intro = true; /* the BIOS runs its full start-up (no fast boot) */
     s->cover_style = COVER_FLAT;
@@ -37,7 +35,6 @@ void config_defaults(Settings *s)
     s->menu_combo = 1;
     s->menu_hold = 1;
     s->quick_resume = true;
-    s->update_check = true;
     snprintf(s->usb_folder, sizeof(s->usb_folder), "psx"); /* /mnt/ext0/psx, /mnt/ext1/psx and /mnt/usb0/psx to /mnt/usb7/psx */
     s->bezel = false; /* the game's artwork frame, when there is one */
     s->theme = THEME_GRAYRAT; /* Grayrat (ui/theme.h) */
@@ -45,18 +42,12 @@ void config_defaults(Settings *s)
     s->ra_popups = true;
     s->hd_textures = true;
     s->ra_tracker = true;
-    s->trigger_effects = 1;
-    s->lightbar = 3; /* red in analog mode, off in digital */
     s->brightness = 1;
     s->game_fixes = true;
     s->disc_animation = true;
     s->jewel_cases = true;
     s->case_lighting = true;
-    s->disc_ask = true;
-    s->install_to_ext = false;
-    s->ntfs_enabled = true;
     s->negcon = false;
-    s->touch_mouse = false;
     s->racing_triggers = false;
     for (int i = 0; i < 16; ++i)
         s->button_map[i] = (int8_t)i;
@@ -82,7 +73,7 @@ static bool config_apply(Settings *s, const char *path)
     FILE *f = fopen(path, "r");
     if (!f)
         return false;
-    char line[1024]; /* long enough for nfs_shares */
+    char line[1024]; /* a line of the settings file */
     bool seen_vibration = false;
     int old_rumble = -1, old_strength = -1;
     while (fgets(line, sizeof(line), f))
@@ -213,23 +204,14 @@ static bool config_apply(Settings *s, const char *path)
             s->ra_tracker = as_bool(value);
         else if (strcmp(key, "ra_popup_style") == 0)
             s->ra_popup_style = atoi(value) % 3;
-        else if (strcmp(key, "lightbar") == 0)
-            s->lightbar = atoi(value) % 4;
         else if (strcmp(key, "stick_deadzone") == 0)
             s->stick_deadzone = atoi(value) % 5;
         else if (strcmp(key, "stick_response") == 0)
             s->stick_response = atoi(value) % 3;
-        else if (strcmp(key, "trigger_effects") == 0)
-            {
-            int v = atoi(value);
-            s->trigger_effects = v >= 0 && v <= 5 ? v : 1;
-        }
         else if (strcmp(key, "racing_triggers") == 0)
             s->racing_triggers = as_bool(value);
         else if (strcmp(key, "rumble_feel") == 0)
             s->rumble_feel = atoi(value) % 4;
-        else if (strcmp(key, "lightgun") == 0)
-            s->lightgun = atoi(value) % 3;
         else if (strcmp(key, "overclock") == 0)
             s->overclock = atoi(value) % 3;
         else if (strcmp(key, "brightness") == 0)
@@ -266,20 +248,12 @@ static bool config_apply(Settings *s, const char *path)
             s->disc_in_tray = as_bool(value);
         else if (strcmp(key, "disc_animation") == 0)
             s->disc_animation = as_bool(value);
-        else if (strcmp(key, "disc_ask") == 0)
-            s->disc_ask = as_bool(value);
-        else if (strcmp(key, "ntfs_enabled") == 0)
-            s->ntfs_enabled = as_bool(value);
-        else if (strcmp(key, "install_to_ext") == 0)
-            s->install_to_ext = as_bool(value);
         else if (strcmp(key, "jewel_cases") == 0)
             s->jewel_cases = as_bool(value);
         else if (strcmp(key, "case_lighting") == 0)
             s->case_lighting = as_bool(value);
         else if (strcmp(key, "negcon") == 0)
             s->negcon = as_bool(value);
-        else if (strcmp(key, "touch_mouse") == 0)
-            s->touch_mouse = as_bool(value);
         else if (strcmp(key, "run_ahead") == 0)
             s->run_ahead = atoi(value) % 11;
         else if (strcmp(key, "fast_effects") == 0)
@@ -294,10 +268,6 @@ static bool config_apply(Settings *s, const char *path)
             s->framegen = as_bool(value) ? 1 : atoi(value) == 2 ? 2 : 0;
         else if (strcmp(key, "usb_folder") == 0)
             snprintf(s->usb_folder, sizeof(s->usb_folder), "%s", value);
-        else if (strcmp(key, "nfs_timeout") == 0)
-            s->nfs_timeout = atoi(value) >= 0 && atoi(value) <= 4 ? atoi(value) : 2;
-        else if (strcmp(key, "nfs_shares") == 0)
-            snprintf(s->nfs_shares, sizeof(s->nfs_shares), "%s", value);
         else if (strcmp(key, "fsr") == 0)
             s->fsr = as_bool(value);
         else if (strcmp(key, "rewind") == 0)
@@ -310,8 +280,6 @@ static bool config_apply(Settings *s, const char *path)
             s->border = atoi(value) % 3;
         else if (strcmp(key, "remote") == 0)
             s->remote = as_bool(value);
-        else if (strcmp(key, "update_check") == 0)
-            s->update_check = as_bool(value);
         else if (strcmp(key, "background") == 0)
             s->background = atoi(value) % 2;
         else if (strcmp(key, "shelf_category") == 0)
@@ -372,10 +340,7 @@ bool config_load_game(Settings *out, const Settings *global, const char *path)
     out->shelf_category = global->shelf_category;
     out->background = global->background;
     out->remote = global->remote;
-    out->update_check = global->update_check;
     snprintf(out->usb_folder, sizeof(out->usb_folder), "%s", global->usb_folder);
-    snprintf(out->nfs_shares, sizeof(out->nfs_shares), "%s", global->nfs_shares);
-    out->nfs_timeout = global->nfs_timeout;
     out->nostalgia = global->nostalgia;
     out->quick_resume = global->quick_resume;
     return true;
@@ -459,26 +424,24 @@ bool config_save(const Settings *s, const char *path)
             s->cover_download, s->ui_sound, s->ui_volume, s->integer_scale, s->internal_res, s->upscale,
             s->upscale_filter, s->stick_dpad, s->language, s->vibration,
             s->sort_mode, s->shelf_category, s->background, s->menu_combo, s->menu_hold);
-    fprintf(f, "widescreen=%d\nmultitap=%d\nrewind=%d\nquick_resume=%d\ncrt=%d\nborder=%d\nremote=%d\nupdate_check=%d\n",
-            s->widescreen, s->multitap, s->rewind, s->quick_resume, s->crt, s->border, s->remote,
-            s->update_check);
-    fprintf(f, "ntfs_enabled=%d\n", s->ntfs_enabled);
-    fprintf(f, "renderer=%d\nusb_folder=%s\nnfs_timeout=%d\nnfs_shares=%s\n", s->renderer, s->usb_folder, s->nfs_timeout, s->nfs_shares);
+    fprintf(f, "widescreen=%d\nmultitap=%d\nrewind=%d\nquick_resume=%d\ncrt=%d\nborder=%d\nremote=%d\n",
+            s->widescreen, s->multitap, s->rewind, s->quick_resume, s->crt, s->border, s->remote);
+    fprintf(f, "renderer=%d\nusb_folder=%s\n", s->renderer, s->usb_folder);
     fprintf(f, "version=%s\n", SwanStationPS5_VERSION); /* a newer version starts with clean settings (main.c) */
     fprintf(f, "pgxp=%d\nra_popups=%d\nra_tracker=%d\ncrop_edges=%d\n", s->pgxp, s->ra_popups, s->ra_tracker,
             s->crop_edges);
     fprintf(f, "manual_crop=%d\nmc_w=%d\nmc_h=%d\nmc_x=%d\nmc_y=%d\n", s->manual_crop, s->mc_w, s->mc_h, s->mc_x, s->mc_y);
-    fprintf(f, "ra_popup_style=%d\nlightbar=%d\nshader=%d\nhd_textures=%d\ntheme=%d\n", s->ra_popup_style,
-            s->lightbar, s->shader, s->hd_textures, s->theme);
-    fprintf(f, "stick_deadzone=%d\nstick_response=%d\ntrigger_effects=%d\nracing_triggers=%d\nrumble_feel=%d\n",
-            s->stick_deadzone, s->stick_response, s->trigger_effects, s->racing_triggers, s->rumble_feel);
-    fprintf(f, "lightgun=%d\noverclock=%d\nbrightness=%d\ncolour=%d\nautosave=%d\nbezel=%d\n", s->lightgun,
+    fprintf(f, "ra_popup_style=%d\nshader=%d\nhd_textures=%d\ntheme=%d\n", s->ra_popup_style,
+            s->shader, s->hd_textures, s->theme);
+    fprintf(f, "stick_deadzone=%d\nstick_response=%d\nracing_triggers=%d\nrumble_feel=%d\n",
+            s->stick_deadzone, s->stick_response, s->racing_triggers, s->rumble_feel);
+    fprintf(f, "overclock=%d\nbrightness=%d\ncolour=%d\nautosave=%d\nbezel=%d\n",
             s->overclock, s->brightness, s->colour, s->autosave, s->bezel);
     fprintf(f, "msaa=%d\ntexture_filter=%d\nfilter_2d=%d\nsupersampling=%d\ndeinterlace=%d\npal60=%d\ngame_fixes=%d\n",
             s->msaa, s->texture_filter, s->filter_2d, s->supersampling, s->deinterlace, s->pal60, s->game_fixes);
-    fprintf(f, "fmv_smooth=%d\ntrue_colour=%d\nboot_intro=%d\nsharpen=%d\ndisc_animation=%d\ndisc_in_tray=%d\nnegcon=%d\njewel_cases=%d\ncase_lighting=%d\ndisc_ask=%d\ninstall_to_ext=%d\n",
-            s->fmv_smooth, s->true_colour, s->boot_intro, s->sharpen, s->disc_animation, s->disc_in_tray, s->negcon, s->jewel_cases, s->case_lighting, s->disc_ask, s->install_to_ext);
-    fprintf(f, "touch_mouse=%d\nrun_ahead=%d\nfast_effects=%d\nframegen=%d\nvideo_out=%d\nfsr=%d\nframe_pacing=%d\nnostalgia=%d\n", s->touch_mouse, s->run_ahead,
+    fprintf(f, "fmv_smooth=%d\ntrue_colour=%d\nboot_intro=%d\nsharpen=%d\ndisc_animation=%d\ndisc_in_tray=%d\nnegcon=%d\njewel_cases=%d\ncase_lighting=%d\n",
+            s->fmv_smooth, s->true_colour, s->boot_intro, s->sharpen, s->disc_animation, s->disc_in_tray, s->negcon, s->jewel_cases, s->case_lighting);
+    fprintf(f, "run_ahead=%d\nfast_effects=%d\nframegen=%d\nvideo_out=%d\nfsr=%d\nframe_pacing=%d\nnostalgia=%d\n", s->run_ahead,
             s->fast_effects, s->framegen, s->video_out, s->fsr, s->frame_pacing, s->nostalgia);
     for (int i = 0; i < SS_OPT_COUNT; ++i)
     {
