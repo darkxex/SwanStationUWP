@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - frame generation (AMD FSR 3's interpolation, third_party/framegen) is not built into the Xbox
+ * SwanStationUWP - frame generation (AMD FSR 3's interpolation, third_party/framegen) is not built into the Xbox
  * package yet: these stand in for it, so the presenter turns the setting off ("can't start") instead of failing.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

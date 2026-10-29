@@ -17,7 +17,7 @@ dist/
 *.suo
 *.log
 
-# SwanStation Xbox: fetched or built by tools/*.ps1, never committed
+# SwanStationUWP: fetched or built by tools/*.ps1, never committed
 .ref/
 xbox/Mesa/
 xbox/Core/

@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the drives a games folder is looked for on. On the console the USB drives and the extended storage
+ * SwanStationUWP - the drives a games folder is looked for on. On the console the USB drives and the extended storage
  * show up as drive letters; a UWP app sees one only if the user gave it access, so a letter that is not there is simply
  * left out. Games are looked for in <letter>:/<Games folder>, as "psx" by default.
  * SPDX-License-Identifier: GPL-3.0-or-later

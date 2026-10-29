@@ -35,6 +35,8 @@ int vkp_framegen_times(void);         /* the frames shown for each of the game's
 double vkp_framegen_hz(void);         /* the display's rate while frames are being generated, else 0 */
 void vkp_frame_repeated(void);        /* the core's last frame repeats the picture of the one before */
 void vkp_want_high_refresh(bool on);  /* before vkp_open: the 120 Hz mode */
+void vkp_want_extent(int width, int height); /* before vkp_open: the window's size in pixels, for the swapchain */
+bool vkp_resize(int width, int height, char *error, size_t size); /* the window or the TV's mode changed size: the swapchain follows it */
 bool vkp_set_mode(int width, int height, char *error, size_t size); /* the TV's mode, at once (with the GPU interface); the screen's objects are made again */
 void vkp_want_size(int width, int height); /* before vkp_open: the screen's mode (the canvas's size when the TV has none like it) */
 void vkp_show_game(float x, float y, float w, float h, float crop, int shader, int tex_w, int tex_h, int lines);

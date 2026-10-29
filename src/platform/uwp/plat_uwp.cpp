@@ -1,19 +1,18 @@
 /*
- * SwanStation Xbox - platform layer for Xbox Series X|S (UWP, developer mode).
+ * SwanStationUWP - platform layer for Xbox Series X|S (UWP, developer mode).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The same interface platform.h gave the PS5 and desktop builds, on what UWP offers: the screen through Vulkan (Mesa's
- * Dozen on Direct3D 12, vk_present.c), Xbox controllers through Windows.Gaming.Input, sound through XAudio2.
+ * Dozen on Direct3D 12, vk_present.c), Xbox controllers through XInput, sound through XAudio2.
  * The interface is always drawn by the GPU (vk_ui.inc); there is no CPU canvas.
  */
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
-#include <winrt/Windows.Devices.Power.h>
-#include <winrt/Windows.Gaming.Input.h>
 #include <winrt/Windows.System.UserProfile.h>
 
 #include <windows.h>
 #include <xaudio2.h>
+#include <xinput.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -32,7 +31,6 @@ extern "C"
 }
 #include "uwp_app.h"
 
-using namespace winrt::Windows::Gaming::Input;
 
 #define SCREEN_W 1920 /* the interface's coordinates; the swap chain can be any size */
 #define SCREEN_H 1080
@@ -63,6 +61,9 @@ extern "C" bool plat_init(void)
     static const int OUTPUT_W[] = {1920, 2560, 3840}, OUTPUT_H[] = {1080, 1440, 2160};
     const int output = output_wanted > 0 && output_wanted < 3 ? output_wanted : 0;
     vkp_want_size(OUTPUT_W[output], OUTPUT_H[output]);
+    int win_w = 0, win_h = 0;
+    if (uwp_window_pixels(&win_w, &win_h))
+        vkp_want_extent(win_w, win_h);
     if (!vkp_open(SCREEN_W, SCREEN_H, error, sizeof(error)))
     {
         snprintf(init_error, sizeof(init_error), "screen: %s", error);
@@ -119,69 +120,39 @@ static int physical(int port)
     return port >= 0 && port < SwanStationPS5_MAX_PADS ? player_order[port] : -1;
 }
 
-/* The controllers, in the order they were found: pad[i] is physical controller i. Gamepad events come from other
- * threads, so the list is guarded. */
-static std::mutex pads_lock;
-static std::vector<Gamepad> gamepads;
-static bool pads_hooked;
+/* The controllers are read with XInput, as RetroArch's UWP build does (xinput1_4 works in a UWP app, on a PC and on an
+ * Xbox): slot i is physical controller i. A slot with nothing in it is only asked about once a second, since asking
+ * for an empty one every frame is slow. */
+static bool pad_present[SwanStationPS5_MAX_PADS];
+static uint64_t pad_probe_at[SwanStationPS5_MAX_PADS];
 static uint16_t rumble_strong[SwanStationPS5_MAX_PADS], rumble_weak[SwanStationPS5_MAX_PADS];
 static int battery[SwanStationPS5_MAX_PADS] = {-1, -1, -1, -1};
 static uint64_t battery_read_at[SwanStationPS5_MAX_PADS];
 
-static void hook_gamepads()
+static int clamp16(int v)
 {
-    if (pads_hooked)
-        return;
-    pads_hooked = true;
-    {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        for (auto const &g : Gamepad::Gamepads())
-            gamepads.push_back(g);
-    }
-    Gamepad::GamepadAdded([](winrt::Windows::Foundation::IInspectable const &, Gamepad const &g) {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        for (auto const &have : gamepads)
-            if (have == g)
-                return;
-        gamepads.push_back(g);
-    });
-    Gamepad::GamepadRemoved([](winrt::Windows::Foundation::IInspectable const &, Gamepad const &g) {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        for (size_t i = 0; i < gamepads.size(); ++i)
-            if (gamepads[i] == g)
-            {
-                gamepads.erase(gamepads.begin() + (ptrdiff_t)i);
-                break;
-            }
-    });
-}
-
-static int clamp16(double v)
-{
-    v *= 32767.0;
-    return (int)(v > 32767.0 ? 32767.0 : v < -32767.0 ? -32767.0 : v);
+    return v > 32767 ? 32767 : v < -32767 ? -32767 : v;
 }
 
 /* Xbox buttons on the frontend's pad bits (RetroPad numbering, PlayStation names: A is the bottom button, Cross).
- * View plays the part the DualSense touchpad had (hold it for the shortcuts, tap it for Select); Menu is Start. */
-static uint32_t buttons_of(GamepadButtons b)
+ * View (Back) plays the part the DualSense touchpad had (hold it for the shortcuts, tap it for Select); Menu is Start. */
+static uint32_t buttons_of(WORD b)
 {
     uint32_t out = 0;
-    auto has = [&](GamepadButtons m) { return (b & m) == m; };
-    if (has(GamepadButtons::A)) out |= BIT(BTN_CROSS);
-    if (has(GamepadButtons::B)) out |= BIT(BTN_CIRCLE);
-    if (has(GamepadButtons::X)) out |= BIT(BTN_SQUARE);
-    if (has(GamepadButtons::Y)) out |= BIT(BTN_TRIANGLE);
-    if (has(GamepadButtons::View)) out |= BIT(BTN_MENU);
-    if (has(GamepadButtons::Menu)) out |= BIT(BTN_START);
-    if (has(GamepadButtons::DPadUp)) out |= BIT(BTN_UP);
-    if (has(GamepadButtons::DPadDown)) out |= BIT(BTN_DOWN);
-    if (has(GamepadButtons::DPadLeft)) out |= BIT(BTN_LEFT);
-    if (has(GamepadButtons::DPadRight)) out |= BIT(BTN_RIGHT);
-    if (has(GamepadButtons::LeftShoulder)) out |= BIT(BTN_L1);
-    if (has(GamepadButtons::RightShoulder)) out |= BIT(BTN_R1);
-    if (has(GamepadButtons::LeftThumbstick)) out |= BIT(BTN_L3);
-    if (has(GamepadButtons::RightThumbstick)) out |= BIT(BTN_R3);
+    if (b & XINPUT_GAMEPAD_A) out |= BIT(BTN_CROSS);
+    if (b & XINPUT_GAMEPAD_B) out |= BIT(BTN_CIRCLE);
+    if (b & XINPUT_GAMEPAD_X) out |= BIT(BTN_SQUARE);
+    if (b & XINPUT_GAMEPAD_Y) out |= BIT(BTN_TRIANGLE);
+    if (b & XINPUT_GAMEPAD_BACK) out |= BIT(BTN_MENU);
+    if (b & XINPUT_GAMEPAD_START) out |= BIT(BTN_START);
+    if (b & XINPUT_GAMEPAD_DPAD_UP) out |= BIT(BTN_UP);
+    if (b & XINPUT_GAMEPAD_DPAD_DOWN) out |= BIT(BTN_DOWN);
+    if (b & XINPUT_GAMEPAD_DPAD_LEFT) out |= BIT(BTN_LEFT);
+    if (b & XINPUT_GAMEPAD_DPAD_RIGHT) out |= BIT(BTN_RIGHT);
+    if (b & XINPUT_GAMEPAD_LEFT_SHOULDER) out |= BIT(BTN_L1);
+    if (b & XINPUT_GAMEPAD_RIGHT_SHOULDER) out |= BIT(BTN_R1);
+    if (b & XINPUT_GAMEPAD_LEFT_THUMB) out |= BIT(BTN_L3);
+    if (b & XINPUT_GAMEPAD_RIGHT_THUMB) out |= BIT(BTN_R3);
     return out;
 }
 
@@ -190,26 +161,47 @@ extern "C" void plat_poll(PadState pads[SwanStationPS5_MAX_PADS], bool *quit)
     uwp_pump_events();
     if (quit && uwp_quit_requested())
         *quit = true;
-    hook_gamepads();
+    // The window's SizeChanged event, and a look every half second in case it does not come (the console's TV modes)
+    static unsigned polls;
+    const bool resized = uwp_take_window_resized();
+    if (gpu_ui && (resized || ++polls % 30 == 0))
+    {
+        int w = 0, h = 0;
+        if (uwp_window_pixels(&w, &h))
+        {
+            char error[160];
+            if (!vkp_resize(w, h, error, sizeof(error)))
+                SwanStationPS5_log("screen: %s", error);
+        }
+    }
     PadState raw[SwanStationPS5_MAX_PADS];
     memset(raw, 0, sizeof(raw));
-    std::vector<Gamepad> now;
+    uint64_t now = plat_ticks_us();
+    for (int i = 0; i < SwanStationPS5_MAX_PADS; ++i)
     {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        now = gamepads;
-    }
-    for (size_t i = 0; i < now.size() && i < SwanStationPS5_MAX_PADS; ++i)
-    {
-        GamepadReading r = now[i].GetCurrentReading();
+        if (!pad_present[i] && pad_probe_at[i] && now - pad_probe_at[i] < 1000000ull)
+            continue;
+        pad_probe_at[i] = now;
+        XINPUT_STATE st;
+        memset(&st, 0, sizeof(st));
+        bool found = XInputGetState((DWORD)i, &st) == ERROR_SUCCESS;
+        if (found != pad_present[i])
+        {
+            pad_present[i] = found;
+            SwanStationPS5_log("input: controller %d %s", i + 1, found ? "connected" : "disconnected");
+        }
+        if (!found)
+            continue;
+        const XINPUT_GAMEPAD &g = st.Gamepad;
         PadState *p = &raw[i];
         p->connected = true;
-        p->buttons = buttons_of(r.Buttons);
-        p->lx = (int16_t)clamp16(r.LeftThumbstickX);
-        p->ly = (int16_t)clamp16(-r.LeftThumbstickY); /* the frontend counts down as positive */
-        p->rx = (int16_t)clamp16(r.RightThumbstickX);
-        p->ry = (int16_t)clamp16(-r.RightThumbstickY);
-        p->l2 = (uint8_t)(r.LeftTrigger * 255.0 + 0.5);
-        p->r2 = (uint8_t)(r.RightTrigger * 255.0 + 0.5);
+        p->buttons = buttons_of(g.wButtons);
+        p->lx = (int16_t)clamp16(g.sThumbLX);
+        p->ly = (int16_t)clamp16(-(int)g.sThumbLY); /* the frontend counts down as positive */
+        p->rx = (int16_t)clamp16(g.sThumbRX);
+        p->ry = (int16_t)clamp16(-(int)g.sThumbRY);
+        p->l2 = g.bLeftTrigger;
+        p->r2 = g.bRightTrigger;
         if (p->l2 > 127) p->buttons |= BIT(BTN_L2);
         if (p->r2 > 127) p->buttons |= BIT(BTN_R2);
     }
@@ -221,8 +213,7 @@ extern "C" const char *plat_pad_name(int port)
 {
     static char name[SwanStationPS5_MAX_PADS][32];
     int i = physical(port);
-    std::lock_guard<std::mutex> guard(pads_lock);
-    if (i < 0 || i >= (int)gamepads.size())
+    if (i < 0 || i >= SwanStationPS5_MAX_PADS || !pad_present[i])
         return NULL;
     snprintf(name[i], sizeof(name[i]), "Xbox Controller %d", i + 1);
     return name[i];
@@ -243,27 +234,22 @@ extern "C" int plat_pad_battery(int port)
     if (battery_read_at[i] && now - battery_read_at[i] < 10000000ull)
         return battery[i];
     battery_read_at[i] = now;
-    Gamepad g{nullptr};
-    {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        if (i < (int)gamepads.size())
-            g = gamepads[i];
-    }
     battery[i] = -1;
-    if (g)
-        try
+    XINPUT_BATTERY_INFORMATION info;
+    memset(&info, 0, sizeof(info));
+    /* XInput only gives four levels; a wired pad has no battery to tell about */
+    if (pad_present[i] && XInputGetBatteryInformation((DWORD)i, BATTERY_DEVTYPE_GAMEPAD, &info) == ERROR_SUCCESS &&
+        info.BatteryType != BATTERY_TYPE_DISCONNECTED && info.BatteryType != BATTERY_TYPE_WIRED &&
+        info.BatteryType != BATTERY_TYPE_UNKNOWN)
+    {
+        switch (info.BatteryLevel)
         {
-            auto report = g.TryGetBatteryReport();
-            if (report && report.RemainingCapacityInMilliwattHours() && report.FullChargeCapacityInMilliwattHours())
-            {
-                double full = (double)report.FullChargeCapacityInMilliwattHours().Value();
-                if (full > 0)
-                    battery[i] = (int)(100.0 * report.RemainingCapacityInMilliwattHours().Value() / full + 0.5);
-            }
+        case BATTERY_LEVEL_EMPTY: battery[i] = 5; break;
+        case BATTERY_LEVEL_LOW: battery[i] = 25; break;
+        case BATTERY_LEVEL_MEDIUM: battery[i] = 60; break;
+        default: battery[i] = 100; break;
         }
-        catch (winrt::hresult_error const &)
-        {
-        }
+    }
     return battery[i];
 }
 
@@ -276,18 +262,12 @@ extern "C" void plat_rumble(int port, uint16_t strong, uint16_t weak)
         return;
     rumble_strong[i] = strong;
     rumble_weak[i] = weak;
-    Gamepad g{nullptr};
-    {
-        std::lock_guard<std::mutex> guard(pads_lock);
-        if (i < (int)gamepads.size())
-            g = gamepads[i];
-    }
-    if (!g)
+    if (!pad_present[i])
         return;
-    GamepadVibration v{};
-    v.LeftMotor = strong / 65535.0;
-    v.RightMotor = weak / 65535.0;
-    g.Vibration(v);
+    XINPUT_VIBRATION v;
+    v.wLeftMotorSpeed = strong;
+    v.wRightMotorSpeed = weak;
+    XInputSetState((DWORD)i, &v);
 }
 
 /* ---------------------------------------------------------------- audio (XAudio2) */

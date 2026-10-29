@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SwanStation Xbox - the package's tile and splash images, made from the project's icon and launch background.
+"""SwanStationUWP - the package's tile and splash images, made from the project's icon and launch background.
 
     python tools/make-xbox-assets.py     -> xbox/Assets/*.png
 

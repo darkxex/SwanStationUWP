@@ -1,5 +1,5 @@
 <#
-  SwanStation Xbox - builds the UWP package for the Xbox Series X|S: dist\SwanStationXbox_<version>_x64.appx (+ the certificate).
+  SwanStationUWP - builds the UWP package for the Xbox Series X|S: dist\SwanStationXbox_<version>_x64.appx (+ the certificate).
   SPDX-License-Identifier: GPL-3.0-or-later
 
     .\tools\build-xbox.ps1 [-Configuration Release] [-SkipCore]
@@ -32,8 +32,9 @@ function Find-MSBuild {
 $pfx = Join-Path $root "xbox\SwanStationXbox_TemporaryKey.pfx"
 if (-not (Test-Path $pfx)) {
     Write-Host "making the signing certificate"
-    $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=SwanStationXbox" -KeyUsage DigitalSignature -FriendlyName "SwanStation Xbox" `
-        -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+    # 10 years: the default is one, and a package signed with an expired certificate cannot be installed or updated
+    $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=SwanStationXbox" -KeyUsage DigitalSignature -FriendlyName "SwanStationUWP" `
+        -NotAfter (Get-Date).AddYears(10) -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
     $password = ConvertTo-SecureString -String "swanstation" -Force -AsPlainText
     Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $password | Out-Null
     Export-Certificate -Cert $cert -FilePath (Join-Path $root "xbox\SwanStationXbox.cer") | Out-Null

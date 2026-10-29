@@ -450,8 +450,8 @@ void app_rescan(void)
         app.settings = app.global;
     }
     /* The games folder, then on each drive both <drive>/<name> and <drive>/<name>/games, for our
-     * folder name and for the PSXS5 one. */
-    static const char *const names[] = {"SwanStation", "PSXS5"};
+     * folder name. */
+    static const char *const names[] = {"SwanStation"};
     static char drive_roots[DRIVE_COUNT * 2 * 2][SwanStationPS5_PATH_MAX];
     static char usb_roots[DRIVE_COUNT][SwanStationPS5_PATH_MAX];
     static char nfs_roots[NFS_MAX_SHARES + NTFSFS_MAX_VOLUMES * 2][NFS_PATH_MAX];
@@ -459,8 +459,6 @@ void app_rescan(void)
     const char *roots[3 + DRIVE_COUNT * 2 * 2 + DRIVE_COUNT + NFS_MAX_SHARES + NTFSFS_MAX_VOLUMES * 2];
     int root_count = 0;
     roots[root_count++] = app.paths.games;
-    roots[root_count++] = "/data/PSXS5/games";
-    roots[root_count++] = "/data/homebrew/PPSA99248/games";
     int drive_count = 0;
     for (int d = 0; d < DRIVE_COUNT; ++d)
         for (int n = 0; n < 2; ++n)
@@ -926,27 +924,6 @@ static bool bios_dir_has_bin(const char *dir)
 static bool bios_file_present(void)
 {
     return bios_dir_has_bin(app.paths.bios);
-}
-
-/* Also support the BIOS folders of PSXS5 and of the other homebrew (PPSA99248): used when ours has no BIOS file and one of
- * those has. */
-static void bios_use_legacy_dir(void)
-{
-    static const char *const legacy[] = {"/data/PSXS5/bios", "/data/homebrew/PPSA99248/bios"};
-    if (bios_dir_has_bin(app.paths.bios))
-        return;
-    for (size_t i = 0; i < sizeof(legacy) / sizeof(legacy[0]); ++i)
-    {
-        DIR *d = opendir(legacy[i]);
-        if (!d) /* missing or can't be listed: nothing proves it holds a BIOS */
-            continue;
-        closedir(d);
-        if (!bios_dir_has_bin(legacy[i]))
-            continue;
-        str_copy(app.paths.bios, sizeof(app.paths.bios), legacy[i]);
-        SwanStationPS5_log("bios: none in our bios folder, using %s", legacy[i]);
-        return;
-    }
 }
 
 /* A libcrypt game (most PAL discs) needs its .sbi file beside the disc image, with the image's name. The package holds
@@ -1927,11 +1904,11 @@ static const char *menu_combo_hint(void)
 {
     if (app.global.menu_hold == 0)
         return app.global.menu_combo == 1   ? "Press {L3} + {R3} to open the game menu."
-               : app.global.menu_combo == 2 ? "Press {Options} + {Touchpad} to open the game menu."
-                                            : "Press {Touchpad} + {R3} to open the game menu.";
+               : app.global.menu_combo == 2 ? "Press {Options} + {View button} to open the game menu."
+                                            : "Press {View button} + {R3} to open the game menu.";
     return app.global.menu_combo == 1   ? "Hold {L3} + {R3} to open the game menu."
-           : app.global.menu_combo == 2 ? "Hold {Options} + {Touchpad} to open the game menu."
-                                        : "Hold {Touchpad} + {R3} to open the game menu.";
+           : app.global.menu_combo == 2 ? "Hold {Options} + {View button} to open the game menu."
+                                        : "Hold {View button} + {R3} to open the game menu.";
 }
 
 void app_start_game(int index, bool resume)
@@ -1994,9 +1971,9 @@ void app_start_game(int index, bool resume)
         if (app.settings.analog && !controls_special_for(g, &app.settings) && !controls_gun_active())
         {
             static const char *const COMBOS[] = {
-                "{L1} + {R1} + {L3} + {R3}", "{L1} + {L2} + {R1} + {R2} + {Options} + {Touchpad}",
-                "{L1} + {R1} + {Touchpad}", "{L1} + {R1} + {Options}", "{L1} + {R1} + {L3}", "{L1} + {R1} + {R3}",
-                "{L2} + {R2} + {Touchpad}", "{L2} + {R2} + {Options}", "{L2} + {R2} + {L3}", "{L2} + {R2} + {R3}",
+                "{L1} + {R1} + {L3} + {R3}", "{L1} + {L2} + {R1} + {R2} + {Options} + {View button}",
+                "{L1} + {R1} + {View button}", "{L1} + {R1} + {Options}", "{L1} + {R1} + {L3}", "{L1} + {R1} + {R3}",
+                "{L2} + {R2} + {View button}", "{L2} + {R2} + {Options}", "{L2} + {R2} + {L3}", "{L2} + {R2} + {R3}",
                 "{L3} + {R3}"};
             int combo = 2; /* L1 + R1 + Select, the core's own default */
             for (int i = 0; i < SS_OPT_COUNT; ++i)
@@ -2753,7 +2730,6 @@ int main(int argc, char **argv)
                           app.paths.covers, app.paths.logs,   app.paths.cache};
     for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); ++i)
         make_dirs(dirs[i]);
-    bios_use_legacy_dir();
     bios_choices_scan(app.paths.bios); /* before the settings are read: the BIOS options list the folder's files */
     char probe[SwanStationPS5_PATH_MAX];
     path_join(probe, sizeof(probe), app.paths.root, ".write-test");
@@ -3034,7 +3010,7 @@ int main(int argc, char **argv)
                     text_draw_fit(x + 120, y + 20, 30, FONT_BOLD, argb_alpha(TH_TEXT, in), ALIGN_LEFT, w - 140,
                                   tr("Preview"));
                     text_draw(x + 120, y + 66, 22, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, in), ALIGN_LEFT,
-                              tr("Press {Touchpad} to return to settings..."));
+                              tr("Press {View button} to return to settings..."));
                 }
                 app_draw_toast();
             }

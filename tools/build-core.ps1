@@ -1,5 +1,5 @@
 <#
-  SwanStation Xbox - builds the SwanStation core (libretro's DuckStation fork) as a UWP DLL: xbox\Core\x64\swanstation_libretro.dll.
+  SwanStationUWP - builds the SwanStation core (libretro's DuckStation fork) as a UWP DLL: xbox\Core\x64\swanstation_libretro.dll.
   SPDX-License-Identifier: GPL-3.0-or-later
 
   Needs Visual Studio 2022 (UWP C++ tools) and CMake. The core's source is the submodule third_party\swanstation; the

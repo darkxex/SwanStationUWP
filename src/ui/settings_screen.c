@@ -9,13 +9,11 @@
 #include "../core/host.h"
 #include "../drives.h"
 #include "../i18n.h"
-#include "../nfs/nfs.h"
 #include "../profiles.h"
 #include "../platform/platform.h"
 #include "../platform/xbr.h"
 #include "../ra/achievements.h"
 #include "../remote.h"
-#include "../update.h"
 #include "../../third_party/qrcodegen/qrcodegen.h"
 #include "coverflow.h"
 #include "draw.h"
@@ -54,7 +52,6 @@ enum Special
     SP_NONE,
     SP_LANGUAGE,
     SP_HARDCORE,
-    SP_UNLOCK,
     SP_ACCOUNT,
     SP_BIOS,
     SP_BIOS_START,
@@ -67,9 +64,7 @@ enum Special
     SP_SOUND,
     SP_MEMCARDS,
     SP_REMOTE,
-    SP_UPDATE,
     SP_HOTKEYS,
-    SP_WHITELIST,
     SP_STATS,
     SP_THEME,
     SP_PLAYERS,
@@ -77,7 +72,6 @@ enum Special
     SP_WHO,
     SP_HDTEX, /* drives the two core options for texture packs */
     SP_USBFOLDER, /* the games folder on USB drives, typed */
-    SP_NFSHARES,  /* the NFS servers that hold games, typed */
     SP_DRIVES,    /* the extended and USB drives found, with their free space */
 };
 
@@ -115,7 +109,6 @@ static const char *row_help(const Row *r)
 static const char *const OFF_ON[] = {"Off", "On"};
 static const char *const RENDERERS[] = {"GPU (Recommended)", "CPU"};
 static const char *const INTERNAL[] = {"Native", "2x", "3x (720p)", "4x", "5x (1080p)", "6x (1440p)", "7x", "8x", "9x (4K)", "10x", "11x", "12x", "13x", "14x", "15x", "16x"};
-static const char *const NFS_TIMEOUTS[] = {"5 s", "10 s", "15 s", "20 s", "30 s"};
 static const char *const CD_SPEEDS[] = {"Off", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x", "10x"};
 /* unused while the Emulator row is commented out */
 static const __attribute__((unused)) char *const UPSCALE[] = {"Off", "2x", "3x", "4x"};
@@ -129,10 +122,10 @@ static const char *const VOLUMES[] = {"25%", "50%", "75%", "100%"};
 static const char *const VIBRATIONS[] = {"Off", "25%", "50%", "75%", "100%"};
 static const char *const STICK_MODES[] = {"Auto (digital games)", "Always", "Off"};
 static const char *const ANALOG_COMBOS[] = {
-    "{L1} + {R1} + {L3} + {R3}", "{L1} + {L2} + {R1} + {R2} + {Options} + {Touchpad}", "{L1} + {R1} + {Touchpad}",
-    "{L1} + {R1} + {Options}", "{L1} + {R1} + {L3}", "{L1} + {R1} + {R3}", "{L2} + {R2} + {Touchpad}",
+    "{L1} + {R1} + {L3} + {R3}", "{L1} + {L2} + {R1} + {R2} + {Options} + {View button}", "{L1} + {R1} + {View button}",
+    "{L1} + {R1} + {Options}", "{L1} + {R1} + {L3}", "{L1} + {R1} + {R3}", "{L2} + {R2} + {View button}",
     "{L2} + {R2} + {Options}", "{L2} + {R2} + {L3}", "{L2} + {R2} + {R3}", "{L3} + {R3}"};
-static const char *const MENU_COMBOS[] = {"{Touchpad} + {R3}", "{L3} + {R3}", "{Options} + {Touchpad}"};
+static const char *const MENU_COMBOS[] = {"{View button} + {R3}", "{L3} + {R3}", "{Options} + {View button}"};
 static const char *const MENU_HOLDS[] = {"Immediate", "0.5 seconds", "1 second"};
 static const char *const BACKGROUNDS[] = {"Dark", "Cover colour"};
 static const char *const CRT_LEVELS[] = {"Off", "Light", "Strong"};
@@ -145,13 +138,10 @@ static const char *const SHADERS[] = {"Off", "LCD3x", "NTSC 320px S-Video", "NTS
 static const unsigned char SHADER_ORDER[] = {0, 1, 5, 6, 7, 8, 9, 10, 12, 2, 13, 14, 15, 16};
 static const char *const POPUP_STYLES[] = {"Banner", "Compact", "Big trophy"};
 static const char *const BIOS_START_REGIONS[] = {"NTSC-U/C (US, Canada)", "NTSC-J (Japan)", "PAL (Europe, Australia)"};
-static const char *const LIGHTBARS[] = {"System", "Player colours", "Game cover colour", "Analog mode"};
 static const char *const PLAYERS[] = {"1 or 2", "Up to 4 (multitap)"};
 static const char *const DEADZONES[] = {"Off", "5%", "10%", "15%", "20%"};
 static const char *const RESPONSES[] = {"Normal", "Precise", "Quick"};
-static const char *const TRIGGER_FEELS[] = {"Off", "Automatic", "Click", "Light click", "Firm", "Buzz"};
 static const char *const RUMBLE_FEELS[] = {"Classic", "Soft", "Punchy", "Punchy, in the triggers too"};
-static const char *const LIGHTGUNS[] = {"Automatic", "Off", "On"};
 static const char *const __attribute__((unused)) OVERCLOCKS[] = {"Off", "A little", "A lot"};
 static const char *const BRIGHTNESS[] = {"Darker", "Normal", "Brighter", "Brightest"};
 static const char *const COLOURS[] = {"Natural", "Vivid", "Soft", "Warm", "Cool", "Black and white"};
@@ -183,7 +173,7 @@ static const Row DISPLAY[] = {
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(sharpen), SHARPENS, 3, 0},
     {NULL, "Crop black edges", "Hides the black lines many games leave at the top and bottom, which an old TV hid. Pair with Stretch to fill the screen.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(crop_edges), CROPS, 3, 0},
-    {NULL, "Manual crop", "Ignores the crop mode and draws the whole picture, whose area you set yourself. Open the preview with {Touchpad}: {Left}/{Right} stretch or narrow the picture keeping its aspect ratio, and {Up}/{Down} move it up or down. Turn it off and everything is as it was.",
+    {NULL, "Manual crop", "Ignores the crop mode and draws the whole picture, whose area you set yourself. Open the preview with {View button}: {Left}/{Right} stretch or narrow the picture keeping its aspect ratio, and {Up}/{Down} move it up or down. Turn it off and everything is as it was.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(manual_crop), OFF_ON, 2, 0},
     {NULL, "Generate frames",
      "Adds frames AMD FSR 3 makes between the game's own, so motion looks smoother. x2: one between each two, so 30 fps shows at 60 and, with Video output at 120 Hz, 60 fps shows at 120. x4: three between each two, only with Video output at 120 Hz: a 30 fps game shows at 120. With Video output at 60 Hz it only doubles. Each extra frame adds a little input lag. It works at once. Video output is changed above and applies the next time the app starts.",
@@ -234,8 +224,6 @@ static const Row CONTROLS[] = {
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(stick_dpad), STICK_MODES, 3, 0},
     {NULL, "Vibration", "Passes the game's rumble to your controller.", K_CHOICE, APPLY_NOW, SP_NONE,
      false, INT_FIELD(vibration), VIBRATIONS, 5, 0},
-    {NULL, "Light bar", "The controller's light: as the system sets it, blue/red/green/pink by player, the colour of the game's cover, or red in analog mode and off in digital.",
-     K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(lightbar), LIGHTBARS, 4, 0},
     {NULL, "Players", "Up to 4 with a multitap, for games that support it: each Xbox controller is a player.",
      K_CHOICE, APPLY_NEXT_GAME, SP_NONE, false, BOOL_FIELD(multitap), PLAYERS, 2, 0},
     {NULL, "Player order", "Choose which controller is player 1, 2, 3 and 4: press {Cross} on each in turn. Kept until SwanStation closes.",
@@ -246,17 +234,11 @@ static const Row CONTROLS[] = {
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(stick_response), RESPONSES, 3, 0},
     {"Xbox controller", "Rumble feel", "Classic as the game sends it; Soft is gentler; Punchy makes light hits easier to feel, and can shake the triggers too.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(rumble_feel), RUMBLE_FEELS, 4, 0},
-    {NULL, "Trigger effects", "The adaptive triggers. Automatic: {R2} firms up like a gas pedal in racing games (when the NeGcon or the {R2} / {L2} swap is on) and clicks with a light gun. The others give {L2} and {R2} that feel in every game.",
-     K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(trigger_effects), TRIGGER_FEELS, 6, 0},
     {NULL, "Swap {R2} / {L2} with {Cross} / {Square}", "In every game, {R2} and {Cross} swap places, and so do {L2} and {Square}. Handy in racing games where {Cross} is the gas and {Square} the brake (Gran Turismo, Ridge Racer...): the triggers accelerate and brake.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(racing_triggers), OFF_ON, 2, 0},
     {NULL, "NeGcon in compatible games", "Games that support Namco's NeGcon (racing games, Ace Combat...) use it: how far you press {R2} and {L2} counts, and the left stick steers.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(negcon), OFF_ON, 2, 0},
-    {NULL, "View button as a mouse", "Games that support the PlayStation Mouse (Discworld, Lemmings...): slide a finger on the {Touchpad} to move the pointer; {R2} or {Cross} clicks, {L2} or {Circle} right-clicks.",
-     K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(touch_mouse), OFF_ON, 2, 0},
-    {NULL, "Light gun", "GunCon and Justifier games: point the controller at the screen to aim (motion sensor), {R2} fires, {L2} reloads, {R3} re-centres. Automatic turns it on in every game that supports a light gun.",
-     K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(lightgun), LIGHTGUNS, 3, 0},
-    {"Buttons", "View button shortcuts", "Hold the {Touchpad} and press: {R2} fast forward, {L2} rewind (turn Rewind on in System), {Square} screenshot, {Triangle} start/pause the timer, {Circle} reset it.",
+    {"Buttons", "View button shortcuts", "Hold the {View button} and press: {R2} fast forward, {L2} rewind (turn Rewind on in System), {Square} screenshot, {Triangle} start/pause the timer, {Circle} reset it.",
      K_INFO, APPLY_NOW, SP_HOTKEYS, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Button mapping", "Choose what each button of your controller presses.", K_ACTION,
      APPLY_NOW, SP_REMAP, false, NO_FIELD, NULL, 0, 0},
@@ -316,18 +298,8 @@ static const Row LIBRARY[] = {
 static const Row SYSTEM[] = {
     {"SwanStation", "Start BIOS", "Starts the console's BIOS with no disc, to manage memory cards. While Memory Card 1 Type (Restart) is set to Libretro, the saves will not show: that card belongs to each game, and with no game there is none.",
      K_ACTION, APPLY_NOW, SP_BIOS_START, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Ask when a disc is put in", "A disc put in the USB CD drive opens its question by itself: play it from the disc or copy it, or start its game if it is installed already. Off: its game is only shown on the shelf, and the question comes when {Cross} is pressed on it.", K_TOGGLE,
-     APPLY_NOW, SP_NONE, true, BOOL_FIELD(disc_ask), OFF_ON, 2, 0},
-    {NULL, "Install to external memory", "A disc is installed on the extended storage when it has at least 1 GB free, in its SwanStation/games folder, instead of /data. Off: it is installed in /data.", K_TOGGLE,
-     APPLY_NOW, SP_NONE, true, BOOL_FIELD(install_to_ext), OFF_ON, 2, 0},
     {NULL, "Games folder on drives", "A folder name to look for games in on drives. It is looked for on /mnt/ext0/, /mnt/ext1/ and /mnt/usb0/ to /mnt/usb7/ at once, as the number changes with the drives plugged in: psx searches /mnt/usb0/psx, /mnt/usb1/psx and so on. Leave it empty to turn it off.",
      K_ACTION, APPLY_NOW, SP_USBFOLDER, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "NFS shares", "Games on an NFS server of your network, as nfs:// addresses separated by ';'. Example: nfs://192.168.1.85/psx. The shelf lists them like a drive's; only SwanStation sees them. The server has to export the folder to the console. Rescan library connects the ones that did not.",
-     K_ACTION, APPLY_NOW, SP_NFSHARES, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "NTFS disks", "Games on a USB disk formatted as NTFS, read straight from the disk and never copied. The shelf lists the Games folder on drives (and SwanStation/games) of each disk; only SwanStation sees them. Rescan library looks for disks plugged in after the start. A disk Windows left in Fast Startup may not show its latest changes.", K_TOGGLE,
-     APPLY_NOW, SP_NONE, true, BOOL_FIELD(ntfs_enabled), OFF_ON, 2, 0},
-    {NULL, "NFS timeout", "How long a read from an NFS server may take before the connection is given up and the game is left. While it waits, the game stays paused and tries to reconnect. Raise it if the server or the network is slow.",
-     K_CHOICE, APPLY_NOW, SP_NONE, true, INT_FIELD(nfs_timeout), NFS_TIMEOUTS, 5, 0},
     {"Emulation", "Region", "Auto follows the disc; force 50 or 60 Hz, or the Japanese console, if a game misbehaves.", K_CHOICE,
      APPLY_NEXT_GAME, SP_NONE, false, INT_FIELD(region), REGIONS, 3, 0},
     {NULL, "Fast CD loading", "Shorter loading screens; the higher, the faster. Rarely, a game glitches.", K_CHOICE, APPLY_NOW,
@@ -338,7 +310,7 @@ static const Row SYSTEM[] = {
      K_TOGGLE, APPLY_NEXT_GAME, SP_NONE, false, BOOL_FIELD(game_fixes), OFF_ON, 2, 0},
     {"Playing", "Quick resume", "Saves when you leave a game, so the shelf can offer Continue.", K_TOGGLE,
      APPLY_NOW, SP_NONE, true, BOOL_FIELD(quick_resume), OFF_ON, 2, 0},
-    {NULL, "Rewind", "Keeps the last 8 seconds so you can go back ({Touchpad} + {L2}). Uses about 200 MB of memory.",
+    {NULL, "Rewind", "Keeps the last 8 seconds so you can go back ({View button} + {L2}). Uses about 200 MB of memory.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(rewind), OFF_ON, 2, 0},
     {NULL, "Run-ahead", "Answers your buttons 1 to 10 frames sooner, for fighting games and platformers. It runs extra frames: at high internal resolutions some games may slow down. It is not used while Double frames is on.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(run_ahead), RUN_AHEADS, 11, 0},
@@ -350,10 +322,6 @@ static const Row SYSTEM[] = {
      K_TOGGLE, APPLY_NOW, SP_REMOTE, true, BOOL_FIELD(remote), OFF_ON, 2, 0},
     {"Console", "Language", "The language of SwanStation's menus.", K_CHOICE, APPLY_NOW, SP_LANGUAGE, true,
      INT_FIELD(language), NULL, LANG_COUNT, 0},
-    {NULL, "Unlock /data with etaHEN", "SwanStation asks etaHEN for access to your games. Turn off if closing SwanStation crashes the console.",
-     K_TOGGLE, APPLY_NEXT_LAUNCH, SP_UNLOCK, true, NO_FIELD, OFF_ON, 2, 0},
-    {NULL, "Allow SwanStation in PS5SX2 Helper", "PS5SX2 Helper only unlocks the apps listed in /data/whitelist.txt. This adds SwanStation; reload the helper (or restart the console) afterwards.",
-     K_ACTION, APPLY_NOW, SP_WHITELIST, true, NO_FIELD, NULL, 0, 0},
 };
 
 static const Row ABOUT[] = {
@@ -369,10 +337,6 @@ static const Row ABOUT[] = {
      true, NO_FIELD, NULL, 0, 0},
     {NULL, "Created by", "The person behind SwanStationPS5.", K_INFO, APPLY_NOW, SP_CREDITS, true, NO_FIELD, NULL, 0,
      0},
-    {"Updates", "Check for updates", "Looks for a newer SwanStation on GitHub and installs it.", K_ACTION, APPLY_NOW,
-     SP_UPDATE, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Check when SwanStation starts", "Tells you on the shelf when a new version is out.", K_TOGGLE, APPLY_NOW,
-     SP_NONE, true, BOOL_FIELD(update_check), OFF_ON, 2, 0},
 };
 
 typedef struct
@@ -653,7 +617,7 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
             {
                 Row m = {first ? groups[categories[c]] : NULL,
                          "Game menu combination",
-                         "The buttons that open the game menu during a game: {Touchpad} + {R3}, {L3} + {R3} or {Options} + {Touchpad}. How long they must be held is set in Game menu hold time. A combination the analog mode combo already uses can't be chosen.",
+                         "The buttons that open the game menu during a game: {View button} + {R3}, {L3} + {R3} or {Options} + {View button}. How long they must be held is set in Game menu hold time. A combination the analog mode combo already uses can't be chosen.",
                          K_CHOICE,
                          APPLY_NOW,
                          SP_NONE,
@@ -737,22 +701,10 @@ static void ensure_rows(void)
  * frame generation (not in this build). */
 static bool row_hidden(const Row *r)
 {
-    switch (r->special)
-    {
-    case SP_UNLOCK:
-    case SP_WHITELIST:
-    case SP_NFSHARES:
-    case SP_REMOTE:
-    case SP_UPDATE:
+    if (r->special == SP_REMOTE)
         return true;
-    default:
-        break;
-    }
     static const int hidden_fields[] = {
-        (int)offsetof(Settings, lightbar),      (int)offsetof(Settings, trigger_effects), (int)offsetof(Settings, touch_mouse),
-        (int)offsetof(Settings, lightgun),      (int)offsetof(Settings, ntfs_enabled),    (int)offsetof(Settings, install_to_ext),
-        (int)offsetof(Settings, disc_ask),      (int)offsetof(Settings, nfs_timeout),     (int)offsetof(Settings, remote),
-        (int)offsetof(Settings, update_check),  (int)offsetof(Settings, framegen),
+        (int)offsetof(Settings, remote), (int)offsetof(Settings, framegen),
     };
     if (r->offset >= 0)
         for (size_t i = 0; i < sizeof(hidden_fields) / sizeof(hidden_fields[0]); ++i)
@@ -1008,7 +960,6 @@ static int read_value(const Row *r)
     {
     case SP_HDTEX: return hdtex_on(target(r)) ? 1 : 0;
     case SP_HARDCORE: return ra_hardcore();
-    case SP_UNLOCK: return app.unlock_setting;
     default: break;
     }
     if (r->offset < 0)
@@ -1049,10 +1000,6 @@ static void write_value(const Row *r, int v)
         ra_set_hardcore(v != 0); /* turning it on restarts the game */
         if (v)
             cheats_clear(&app.cheats);
-        return;
-    case SP_UNLOCK:
-        app.unlock_setting = v != 0;
-        plat_set_unlock_disabled(!app.unlock_setting);
         return;
     default:
         break;
@@ -1168,20 +1115,8 @@ static const char *value_label(const Row *r, char *buf, size_t size)
         return app.drive_text[S.drive];
     }
     case SP_CREDITS: return "AngelXex";
-    case SP_HOTKEYS: return tr("{Touchpad} + {R2} / {L2}");
+    case SP_HOTKEYS: return tr("{View button} + {R2} / {L2}");
     case SP_USBFOLDER: return app.global.usb_folder[0] ? app.global.usb_folder : tr("Off");
-    case SP_NFSHARES: return app.global.nfs_shares[0] ? app.global.nfs_shares : tr("Off");
-    case SP_UPDATE:
-        switch (update_state())
-        {
-        case UPDATE_CHECKING: return tr("Checking...");
-        case UPDATE_NONE: return tr("Up to date");
-        case UPDATE_AVAILABLE: snprintf(buf, size, tr("%s available: install"), update_version()); return buf;
-        case UPDATE_INSTALLING: return tr("Installing...");
-        case UPDATE_INSTALLED: return tr("Installed: restart SwanStation");
-        case UPDATE_FAILED: return update_message();
-        default: return SwanStationPS5_VERSION;
-        }
     default: break;
     }
     if (!r->labels || v < 0 || v >= r->count)
@@ -1301,7 +1236,7 @@ static void draw_controller(float cx, float cy, int highlight)
     draw_circle(cx + 250, cy + 140, 86, body);
     draw_rrect(cx - 354, cy - 60, 708, 170, 60, body);
     draw_rrect(cx - 110, cy - 118, 220, 110, 18, TH_BG_DEEP); /* View button */
-    text_draw(cx, cy - 80, 18, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, tr("{Touchpad}: tap = {Select}, hold = menu"));
+    text_draw(cx, cy - 80, 18, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, tr("{View button}: tap = {Select}, hold = menu"));
     for (int s = -1; s <= 1; s += 2)
     {
         draw_circle(cx + s * 110, cy + 110, 46, TH_BG);
@@ -1984,7 +1919,7 @@ static void draw_rows(void)
         }
         case K_ACTION:
             icon_draw(ICON_CHEVRON_RIGHT, right - 36, ry + 21, 34, TH_TEXT_SOFT);
-            if (r->special == SP_UPDATE || r->special == SP_USBFOLDER || r->special == SP_NFSHARES)
+            if (r->special == SP_USBFOLDER)
                 text_draw_fit(right - 50, ry + 24, 22, FONT_REGULAR, TH_TEXT_SOFT, ALIGN_RIGHT, w - 520,
                               value_label(r, buf, sizeof(buf)));
             break;
@@ -2023,42 +1958,6 @@ static void usb_folder_set(const char *text)
     app_rescan();
 }
 
-void settings_nfs_shares_set(const char *text)
-{
-    char list[sizeof(app.global.nfs_shares)];
-    str_copy(list, sizeof(list), text);
-    size_t start = 0, end = strlen(list);
-    while (start < end && (list[start] == ' ' || list[start] == '\t'))
-        ++start;
-    while (end > start && strchr(" \t\r\n;", list[end - 1]))
-        --end;
-    list[end] = '\0';
-    memmove(list, list + start, end - start + 1);
-    for (char *p = list; *p; ++p)
-        if (*p == '\n' || *p == '\r')
-            *p = ';';
-    str_copy(app.global.nfs_shares, sizeof(app.global.nfs_shares), list);
-    str_copy(app.settings.nfs_shares, sizeof(app.settings.nfs_shares), list);
-    app_save_settings();
-    char error[256];
-    if (!nfs_set_shares(list, error, sizeof(error)) && error[0])
-    {
-        char *tab = strchr(error, '\t');
-        char message[400];
-        if (tab)
-        {
-            *tab = '\0';
-            snprintf(message, sizeof(message), "%.200s: %s", error, tr(tab + 1));
-        }
-        else
-            snprintf(message, sizeof(message), "%s", error);
-        app_toast_for(message, 6.0f);
-    }
-    if (list[0])
-        app_nfs_notify();
-    app_rescan();
-}
-
 static void activate(const Row *r)
 {
     switch (r->special)
@@ -2094,17 +1993,6 @@ static void activate(const Row *r)
         sfx_play(SFX_SELECT);
         library_stats_open(SCREEN_SETTINGS);
         return;
-    case SP_NFSHARES:
-        if (app.game)
-        {
-            app_toast("Quit the game first");
-            return;
-        }
-        sfx_play(SFX_SELECT);
-        textinput_open(SCREEN_SETTINGS, "NFS shares",
-                       "Type one or more nfs:// addresses, separated by ';'. Example: nfs://192.168.1.85/psx",
-                       app.global.nfs_shares[0] ? app.global.nfs_shares : "nfs://192.168.1.85/psx", settings_nfs_shares_set);
-        return;
     case SP_USBFOLDER:
         sfx_play(SFX_SELECT);
         textinput_open(SCREEN_SETTINGS, "Games folder on drives",
@@ -2115,47 +2003,6 @@ static void activate(const Row *r)
         sfx_play(SFX_SELECT);
         app_start_bios();
         return;
-    case SP_UPDATE:
-        sfx_play(SFX_SELECT);
-        if (update_state() == UPDATE_AVAILABLE)
-            update_install();
-        else
-            update_check();
-        return;
-    case SP_WHITELIST:
-    {
-        /* one line appended to PS5SX2 Helper's list; nothing else changes */
-        static const char *const list = "/data/whitelist.txt";
-        FILE *f = fopen(list, "r");
-        if (!f)
-        {
-            app_toast("No /data/whitelist.txt: PS5SX2 Helper isn't installed");
-            return;
-        }
-        char line[64];
-        bool present = false, ends_newline = true;
-        while (fgets(line, sizeof(line), f))
-        {
-            size_t n = strlen(line);
-            ends_newline = n && line[n - 1] == '\n';
-            line[strcspn(line, "\r\n")] = '\0';
-            present |= strcmp(line, SwanStationPS5_TITLE_ID) == 0;
-        }
-        fclose(f);
-        if (present)
-        {
-            app_toast("SwanStation is already in the whitelist");
-            return;
-        }
-        f = fopen(list, "a");
-        bool ok = f && fprintf(f, "%s%s\n", ends_newline ? "" : "\n", SwanStationPS5_TITLE_ID) > 0;
-        if (f && fclose(f) != 0)
-            ok = false;
-        SwanStationPS5_log("whitelist: %s %s", SwanStationPS5_TITLE_ID, ok ? "added to /data/whitelist.txt" : "could not be added");
-        app_toast(ok ? "Added: reload PS5SX2 Helper or restart the console" : "Could not write /data/whitelist.txt");
-        sfx_play(ok ? SFX_SELECT : SFX_BACK);
-        return;
-    }
     case SP_RESCAN:
         if (app.game)
         {
@@ -2164,8 +2011,6 @@ static void activate(const Row *r)
         }
         if (app.storage_error[0])
             return;
-        if (app.global.nfs_shares[0])
-            app_nfs_notify();
         app_rescan();
         char msg[64];
         snprintf(msg, sizeof(msg), tr(app.library.count == 1 ? "Found %d game" : "Found %d games"),
@@ -2427,13 +2272,7 @@ int settings_json(char *out, size_t size)
     for (int t = 0; t < TAB_COUNT; ++t)
         if (TABS[t].rows == ACHIEVEMENTS)
             ra_tab = t;
-    int nfs_tab = 0;
-    for (int t = 0; t < TAB_COUNT; ++t)
-        if (TABS[t].rows == SYSTEM)
-            nfs_tab = t;
-    PUT("],\"nfs\":{\"tab\":%d,\"shares\":", nfs_tab);
-    at = json_text(out, size, at, app.global.nfs_shares);
-    PUT("},\"ra\":{\"tab\":%d,\"signed_in\":%s,\"user\":", ra_tab, ra_signed_in() ? "true" : "false");
+    PUT("],\"ra\":{\"tab\":%d,\"signed_in\":%s,\"user\":", ra_tab, ra_signed_in() ? "true" : "false");
     at = json_text(out, size, at, ra_user());
     PUT(",\"profile\":");
     at = json_text(out, size, at, profiles_name(profiles_current()));

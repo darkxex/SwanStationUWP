@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the few SDL2 calls the frontend uses outside the platform layer (threads, mutexes, condition
+ * SwanStationUWP - the few SDL2 calls the frontend uses outside the platform layer (threads, mutexes, condition
  * variables, semaphores, atomics, the clock), on Win32 so a UWP package needs no SDL. Same names, same semantics;
  * found through the include path as <SDL2/SDL.h>.
  * SPDX-License-Identifier: GPL-3.0-or-later

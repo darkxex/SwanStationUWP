@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the POSIX file calls the frontend relies on, as UWP allows them: dirent on
+ * SwanStationUWP - the POSIX file calls the frontend relies on, as UWP allows them: dirent on
  * FindFirstFileExFromAppW and an overwriting rename on ReplaceFileFromAppW (the *FromApp calls work on the app's own
  * folders and, where the user granted it, on drives).
  * SPDX-License-Identifier: GPL-3.0-or-later

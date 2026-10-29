@@ -7,11 +7,11 @@
   IgnorableNamespaces="uap mp rescap">
 
   <!-- Publisher must match the subject of the certificate the package is signed with (tools/deploy-xbox.ps1 makes one) -->
-  <Identity Name="SwanStationXbox" Publisher="CN=SwanStationXbox" Version="1.6.0.0" ProcessorArchitecture="x64" />
+  <Identity Name="SwanStationXbox" Publisher="CN=SwanStationXbox" Version="1.0.0.0" ProcessorArchitecture="x64" />
   <mp:PhoneIdentity PhoneProductId="6b0c2d3e-52f4-4c8e-9f6a-0d4c3a1e7b22" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 
   <Properties>
-    <DisplayName>SwanStation Xbox</DisplayName>
+    <DisplayName>SwanStationUWP</DisplayName>
     <PublisherDisplayName>SwanStationXbox</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -28,7 +28,7 @@
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="SwanStationXbox.App">
       <uap:VisualElements
-        DisplayName="SwanStation Xbox"
+        DisplayName="SwanStationUWP"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="A PlayStation 1 emulator (SwanStation) with a cover-flow shelf, Vulkan up to 16x resolution, RetroAchievements, cheats and save states."

@@ -2160,41 +2160,19 @@ void shelf_screen(uint32_t pressed)
     }
     else
     {
-        float w = 1200, x = CENTER_X - w * 0.5f, y = 300;
-        /* the line about discs closes the card, a little bigger than the rest; two lines if it does not fit in one */
-        char tip1[256], tip2[256];
-        const int tip_lines = split_two_lines(28, FONT_REGULAR, w - 100,
-                                              tr("You can also plug in a USB disc drive and put in your own PS1 discs: they are copied to your shelf."),
-                                              tip1, tip2, sizeof(tip1));
-        float h = (app.sandboxed ? 396 : 374) + (tip_lines - 1) * 38;
+        float w = 1200, x = CENTER_X - w * 0.5f, y = 300, h = 330;
         draw_rrect(x, y, w, h, TH_RADIUS, TH_CARD_SOFT);
         icon_draw(ICON_DISC, CENTER_X - 32, y + 30, 64, TH_FOCUS);
         text_draw(CENTER_X, y + 108, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("Your shelf is empty"));
         char line[SwanStationPS5_PATH_MAX + 64];
         snprintf(line, sizeof(line), tr("Games: %s/<Game name>/"), app.paths.games);
-        text_draw(CENTER_X, y + 156, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, line);
-        text_draw(CENTER_X, y + 190, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                  tr("Also: /data/PSXS5/games/ and SwanStation or PSXS5 folders in /mnt/usb0, /mnt/ext1"));
+        text_draw_fit(CENTER_X, y + 156, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
+        text_draw_fit(CENTER_X, y + 190, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 40,
+                      tr("Copy your games into that folder."));
         snprintf(line, sizeof(line), tr("BIOS (optional): %s/"), app.paths.bios);
-        if (strcmp(app.paths.bios, "/data/PSXS5/bios") != 0)
-            strncat(line, " | /data/PSXS5/bios/", sizeof(line) - strlen(line) - 1);
-        text_draw(CENTER_X, y + 226, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, line);
-        if (app.sandboxed)
-        {
-            /* games copied another way can't be found without listing /data */
-            text_draw(CENTER_X, y + 262, 22, FONT_REGULAR, TH_GOLD, ALIGN_CENTER,
-                      tr("Nothing unlocked /data (LegacyJB, etaHEN...), so SwanStation can't look into the games folder."));
-            text_draw(CENTER_X, y + 294, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                      tr("On your PC:  python tools/SwanStationPS5_sync.py index --host <Xbox IP>"));
-        }
-        else
-            text_draw(CENTER_X, y + 274, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                      tr("On your PC:  python tools/SwanStationPS5_sync.py upload --host <Xbox IP>"));
-        /* and the other way, last: your own discs */
-        const float tip_y = y + (app.sandboxed ? 330 : 310);
-        text_draw_fit(CENTER_X, tip_y, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80, tip1);
-        if (tip_lines > 1)
-            text_draw_fit(CENTER_X, tip_y + 38, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80, tip2);
+        text_draw_fit(CENTER_X, y + 226, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
+        text_draw_fit(CENTER_X, y + 274, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80,
+                      tr("Then choose Settings > Rescan library."));
     }
 
     draw_header();

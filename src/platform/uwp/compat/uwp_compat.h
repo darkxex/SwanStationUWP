@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - force-included in every C and C++ source of the UWP build (/FI): the GNU spellings the frontend
+ * SwanStationUWP - force-included in every C and C++ source of the UWP build (/FI): the GNU spellings the frontend
  * uses, on MSVC. No behaviour here, only names.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

@@ -1,5 +1,5 @@
 <#
-  SwanStation Xbox - fetches the Mesa Dozen build (Vulkan on Direct3D 12 for UWP) into xbox\Mesa\x64.
+  SwanStationUWP - fetches the Mesa Dozen build (Vulkan on Direct3D 12 for UWP) into xbox\Mesa\x64.
   SPDX-License-Identifier: GPL-3.0-or-later
 
   The DLLs are SternXD's UWP fork of Mesa (https://github.com/SternXD/mesa-uwp, branch uwp-25.3.3), as shipped by

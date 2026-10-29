@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the screen through Vulkan (Mesa's Dozen: Vulkan on Direct3D 12, in a UWP package).
+ * SwanStationUWP - the screen through Vulkan (Mesa's Dozen: Vulkan on Direct3D 12, in a UWP package).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Dozen presents to the CoreWindow of the thread that creates the swap chain (a FIFO chain, flipped at the TV's
@@ -164,6 +164,7 @@ static struct
 /* asked before the screen opens (vkp_open clears V): frame generation's 120 Hz mode */
 static bool want_high_refresh;
 static int want_width, want_height; /* the output's size; 0: the canvas's */
+static int want_ext_w, want_ext_h;  /* the window's size in pixels, for the swapchain; 0: what the surface says */
 
 const char *vkp_describe(void)
 {
@@ -364,6 +365,10 @@ static bool create_swapchain(char *error, size_t size)
     V.format = chosen.format;
     V.extent = caps.currentExtent.width != UINT32_MAX ? caps.currentExtent
                                                       : (VkExtent2D){(uint32_t)V.cw, (uint32_t)V.ch};
+    /* Dozen's surface always says the size it first measured (1200x900); the window's own size is asked for first */
+    const VkExtent2D surface_extent = V.extent;
+    if (want_ext_w > 0 && want_ext_h > 0)
+        V.extent = (VkExtent2D){(uint32_t)want_ext_w, (uint32_t)want_ext_h};
     uint32_t images = caps.minImageCount < 3 ? 3 : caps.minImageCount;
     if (caps.maxImageCount && images > caps.maxImageCount)
         images = caps.maxImageCount;
@@ -383,7 +388,17 @@ static bool create_swapchain(char *error, size_t size)
                               : (VkCompositeAlphaFlagBitsKHR)caps.supportedCompositeAlpha;
     info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     info.clipped = VK_TRUE;
-    CHECK(vkCreateSwapchainKHR(V.device, &info, NULL, &V.swapchain), "vkCreateSwapchainKHR");
+    info.imageExtent = V.extent;
+    VkResult sr = vkCreateSwapchainKHR(V.device, &info, NULL, &V.swapchain);
+    if (sr != VK_SUCCESS && (V.extent.width != surface_extent.width || V.extent.height != surface_extent.height))
+    {
+        SwanStationPS5_log("vulkan: a %ux%u swapchain was refused (%d): using the surface's %ux%u", V.extent.width,
+                           V.extent.height, (int)sr, surface_extent.width, surface_extent.height);
+        V.extent = surface_extent;
+        info.imageExtent = V.extent;
+        sr = vkCreateSwapchainKHR(V.device, &info, NULL, &V.swapchain);
+    }
+    CHECK(sr, "vkCreateSwapchainKHR");
     V.image_count = MAX_IMAGES;
     CHECK(vkGetSwapchainImagesKHR(V.device, V.swapchain, &V.image_count, V.images), "swapchain images");
     SwanStationPS5_log("vulkan: swapchain %ux%u, %u images, format %d", V.extent.width, V.extent.height,
@@ -770,6 +785,12 @@ void vkp_frame_repeated(void)
 void vkp_want_high_refresh(bool on)
 {
     want_high_refresh = on;
+}
+
+void vkp_want_extent(int width, int height)
+{
+    want_ext_w = width;
+    want_ext_h = height;
 }
 
 void vkp_want_size(int width, int height)
@@ -2245,6 +2266,39 @@ bool vkp_set_mode(int width, int height, char *error, size_t size)
     return false;
 }
 
+/* The window (a PC) or the TV's mode (a console) changed size. Dozen has no window to ask (the surface is made with a
+ * stand-in handle: it presents to the app's CoreWindow), so it keeps the size it measured when the surface was made;
+ * the platform layer says the window's size in pixels, and the surface, the swapchain and what hangs from it are made
+ * again, so the output always matches the screen. A size that was tried is not tried again until it changes. */
+bool vkp_resize(int width, int height, char *error, size_t size)
+{
+    static int tried_w, tried_h;
+    if (!V.swapchain || !U.enabled || width < 16 || height < 16)
+        return true;
+    if ((int)V.extent.width == width && (int)V.extent.height == height)
+        return true;
+    if (tried_w == width && tried_h == height)
+        return true;
+    tried_w = width;
+    tried_h = height;
+    want_ext_w = width;
+    want_ext_h = height;
+    SwanStationPS5_log("vulkan: the window is %dx%d, the swapchain %ux%u: made again", width, height, V.extent.width,
+                       V.extent.height);
+    destroy_device_objects();
+    if (V.surface)
+        vkDestroySurfaceKHR(V.instance, V.surface, NULL);
+    V.surface = VK_NULL_HANDLE;
+    bool ok = create_surface(error, size) && create_swapchain(error, size) && create_pipeline(error, size) &&
+              create_canvas(error, size) && ui_create(error, size);
+    if (!ok)
+        SwanStationPS5_log("vulkan: the screen changed to %dx%d and could not be followed: %s", width, height, error);
+    else if ((int)V.extent.width != width || (int)V.extent.height != height)
+        SwanStationPS5_log("vulkan: the swapchain is %ux%u for a %dx%d window", V.extent.width, V.extent.height, width,
+                           height);
+    return ok;
+}
+
 void vkp_set_game_image(VkImage image, VkImageView view, VkImageLayout layout)
 {
     if (view)
@@ -2472,6 +2526,15 @@ bool vkp_set_mode(int width, int height, char *error, size_t size)
 void vkp_want_size(int width, int height)
 {
     (void)width, (void)height;
+}
+void vkp_want_extent(int width, int height)
+{
+    (void)width, (void)height;
+}
+bool vkp_resize(int width, int height, char *error, size_t size)
+{
+    (void)width, (void)height, (void)error, (void)size;
+    return true;
 }
 void vkp_ui_game_here(void) {}
 void vkp_ui_blend(bool on)

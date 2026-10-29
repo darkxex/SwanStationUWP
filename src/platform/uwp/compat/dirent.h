@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - dirent.h on FindFirstFileExFromAppW, which a UWP app may call on any folder it has been given
+ * SwanStationUWP - dirent.h on FindFirstFileExFromAppW, which a UWP app may call on any folder it has been given
  * (its own LocalState, the install folder, and removable drives where the user allowed file access).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

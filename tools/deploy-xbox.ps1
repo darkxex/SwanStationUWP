@@ -1,5 +1,5 @@
 <#
-  SwanStation Xbox - installs the package on a console in developer mode, through the Device Portal.
+  SwanStationUWP - installs the package on a console in developer mode, through the Device Portal.
   SPDX-License-Identifier: GPL-3.0-or-later
 
     .\tools\deploy-xbox.ps1 -Ip 192.168.1.50 [-Pin 123456]
@@ -28,4 +28,4 @@ if ($Pin) { $arguments += @("-pin", $Pin) }
 Write-Host "installing $($package.Name) on $Ip"
 & $tool.FullName @arguments
 if ($LASTEXITCODE -ne 0) { throw "the install failed." }
-Write-Host "installed: open 'SwanStation Xbox' from My games & apps -> Dev Home."
+Write-Host "installed: open 'SwanStationUWP' from My games & apps -> Dev Home."

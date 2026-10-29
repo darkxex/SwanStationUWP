@@ -86,3 +86,34 @@ index c252d922..d48ffae8 100644
 +  return 0;
 +}
 +#endif
+diff --git a/src/core/cpu_code_cache.cpp b/src/core/cpu_code_cache.cpp
+--- a/src/core/cpu_code_cache.cpp
++++ b/src/core/cpu_code_cache.cpp
+@@ -237,7 +237,12 @@
+ 
+     AllocateFastMap();
+ 
+-    if (g_settings.IsUsingFastmem() && !InitializeFastmem()) { }
++    if (g_settings.IsUsingFastmem() && !InitializeFastmem())
++    {
++      // no page fault handler (UWP has none): the generated code must not use fastmem, or it reads a table that is not there
++      Log_ErrorPrintf("Fastmem is not available, running without it");
++      g_settings.cpu_fastmem_mode = CPUFastmemMode::Disabled;
++    }
+ 
+     CompileDispatcher();
+     ResetFastMap();
+@@ -429,7 +434,12 @@
+     s_code_buffer.Allocate(RECOMPILER_CODE_CACHE_SIZE, RECOMPILER_FAR_CODE_CACHE_SIZE);
+ #endif
+ 
+-    if (g_settings.IsUsingFastmem() && !InitializeFastmem()) { }
++    if (g_settings.IsUsingFastmem() && !InitializeFastmem())
++    {
++      // no page fault handler (UWP has none): the generated code must not use fastmem, or it reads a table that is not there
++      Log_ErrorPrintf("Fastmem is not available, running without it");
++      g_settings.cpu_fastmem_mode = CPUFastmemMode::Disabled;
++    }
+ 
+     AllocateFastMap();
+     CompileDispatcher();

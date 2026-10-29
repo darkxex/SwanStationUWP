@@ -1,4 +1,4 @@
-/* SwanStation Xbox - the few unistd.h calls the frontend makes, on the CRT's io.h. SPDX-License-Identifier: GPL-3.0-or-later */
+/* SwanStationUWP - the few unistd.h calls the frontend makes, on the CRT's io.h. SPDX-License-Identifier: GPL-3.0-or-later */
 #ifndef SwanStationXbox_UNISTD_H
 #define SwanStationXbox_UNISTD_H
 #include <io.h>

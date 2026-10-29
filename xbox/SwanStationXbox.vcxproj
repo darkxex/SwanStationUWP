@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  SwanStation Xbox - the UWP package for Xbox Series X|S in developer mode (Visual Studio 2022, "Universal Windows
+  SwanStationUWP - the UWP package for Xbox Series X|S in developer mode (Visual Studio 2022, "Universal Windows
   Platform development" and "C++ (v143) Universal Windows Platform tools" components, x64 only).
 
   Sources are everything under ..\src except what belongs to the PS5 build (SDL platform layer, ps5_*, libnfs/NTFS readers,

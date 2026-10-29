@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - there is no self-update: a sideloaded UWP package is replaced by installing a newer one (Device Portal
+ * SwanStationUWP - there is no self-update: a sideloaded UWP package is replaced by installing a newer one (Device Portal
  * or tools\deploy-xbox.ps1). The settings page keeps its rows; they report "newest".
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

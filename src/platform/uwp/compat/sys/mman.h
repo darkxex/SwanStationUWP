@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - anonymous mmap/munmap on VirtualAlloc (what discimport.c uses for its read-ahead buffer).
+ * SwanStationUWP - anonymous mmap/munmap on VirtualAlloc (what discimport.c uses for its read-ahead buffer).
  * Only MAP_ANON | MAP_PRIVATE regions of plain read/write memory are supported.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

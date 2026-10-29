@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the Xbox build wrote a crash report into the log from a signal handler; here a crash is caught by the
+ * SwanStationUWP - the Xbox build wrote a crash report into the log from a signal handler; here a crash is caught by the
  * system (Device Portal -> Crash dumps), so these only keep the call sites.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

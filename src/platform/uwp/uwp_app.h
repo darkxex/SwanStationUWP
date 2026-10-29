@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the UWP application shell (CoreApplication view), seen from the platform layer.
+ * SwanStationUWP - the UWP application shell (CoreApplication view), seen from the platform layer.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationXbox_UWP_APP_H
@@ -27,6 +27,10 @@ const char *uwp_local_folder(void);
 /* Asks the TV for a mode (HDMI display mode switch); the raw size of the current one in width/height, refresh in hz.
  * Returns false if the console refused or the mode does not exist. */
 bool uwp_request_display_mode(int width, int height, double hz);
+/* The window changed size since the last call (a PC window resized, the TV's mode changed): true once per change. */
+bool uwp_take_window_resized(void);
+/* The window's size in pixels (its size in view units times the screen's scale); false while there is no window. */
+bool uwp_window_pixels(int *width, int *height);
 bool uwp_current_display_mode(int *width, int *height, double *hz);
 
 #ifdef __cplusplus

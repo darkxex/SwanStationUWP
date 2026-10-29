@@ -36,7 +36,6 @@
 /* provided by ui/settings_screen.c */
 int settings_json(char *out, size_t size);
 const char *settings_set_by_key(const char *key, int value);
-void settings_nfs_shares_set(const char *text);
 
 #if defined(_WIN32)
 
@@ -522,41 +521,6 @@ static bool form_field(const char *body, const char *name, char *out, size_t siz
     return false;
 }
 
-static char nfs_in[512];
-static bool nfs_ready;
-
-static void serve_nfs(int fd, const char *req, size_t req_len)
-{
-    size_t len = 0;
-    char *body = read_body(fd, req, req_len, sizeof(nfs_in) - 1, &len);
-    bool ok = body != NULL;
-    if (ok)
-    {
-        char list[sizeof(nfs_in)];
-        str_copy(list, sizeof(list), body);
-        for (char *item = strtok(list, ";\r\n"); item; item = strtok(NULL, ";\r\n"))
-        {
-            while (*item == ' ' || *item == '\t')
-                ++item;
-            if (*item && strncasecmp(item, "nfs://", 6) != 0)
-                ok = false;
-        }
-    }
-    if (ok)
-    {
-        SDL_LockMutex(lock);
-        memcpy(nfs_in, body, len);
-        nfs_in[len] = '\0';
-        nfs_ready = true;
-        SDL_UnlockMutex(lock);
-    }
-    free(body);
-    if (ok)
-        reply_json(fd, "200 OK", "{\"ok\":true}");
-    else
-        reply_json(fd, "400 Bad Request", "{\"ok\":false,\"error\":\"Every address has to start with nfs://\"}");
-}
-
 static void serve_ra_login(int fd, const char *req, size_t req_len)
 {
     size_t len = 0;
@@ -652,8 +616,6 @@ static void serve(int fd)
         serve_saves(fd, method, path, req, (size_t)n);
     else if (!strcmp(method, "POST") && !strcmp(path, "/api/ra-login"))
         serve_ra_login(fd, req, (size_t)n);
-    else if (!strcmp(method, "POST") && !strcmp(path, "/api/nfs"))
-        serve_nfs(fd, req, (size_t)n);
     else if (!strcmp(method, "POST") && !strcmp(path, "/api/ra-logout"))
     {
         SDL_LockMutex(lock);
@@ -817,26 +779,6 @@ void remote_frame(void)
         ra_sign_out();
         app_toast("Signed out of RetroAchievements");
         refreshed = 0;
-    }
-    char nfs_text[sizeof(nfs_in)];
-    bool nfs_new = false;
-    SDL_LockMutex(lock);
-    if (nfs_ready)
-    {
-        str_copy(nfs_text, sizeof(nfs_text), nfs_in);
-        nfs_ready = false;
-        nfs_new = true;
-    }
-    SDL_UnlockMutex(lock);
-    if (nfs_new)
-    {
-        if (app.game)
-            app_toast("Quit the game first");
-        else
-        {
-            settings_nfs_shares_set(nfs_text);
-            refreshed = 0;
-        }
     }
     for (int i = 0; i < count; ++i)
     {

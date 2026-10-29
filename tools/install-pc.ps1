@@ -1,5 +1,5 @@
 <#
-  SwanStation Xbox - installs the package on this PC (Windows 10/11 with Developer Mode on), to try it before the console.
+  SwanStationUWP - installs the package on this PC (Windows 10/11 with Developer Mode on), to try it before the console.
   SPDX-License-Identifier: GPL-3.0-or-later
 
     .\tools\install-pc.ps1          (run PowerShell as administrator: the certificate goes to the machine's trusted people)
@@ -23,10 +23,12 @@ Import-Certificate -FilePath $cer.FullName -CertStoreLocation "Cert:\LocalMachin
 
 # the VC++ runtime the package depends on (x64 is the one that matters; the build copies it next to the package)
 $deps = @(Get-ChildItem -Path (Join-Path $package.DirectoryName "Dependencies\x64") -Filter "*.appx" -ErrorAction SilentlyContinue | ForEach-Object FullName)
+# Builds keep the same version until it is raised by hand, and Windows only updates to a higher one: -ForceUpdateFromAnyVersion takes
+# the new build over the installed one, so there is no need to uninstall first (the app's data in LocalState stays).
 if ($deps.Count -gt 0) {
-    Add-AppxPackage -Path $package.FullName -DependencyPath $deps -ForceApplicationShutdown
+    Add-AppxPackage -Path $package.FullName -DependencyPath $deps -ForceApplicationShutdown -ForceUpdateFromAnyVersion
 } else {
-    Add-AppxPackage -Path $package.FullName -ForceApplicationShutdown
+    Add-AppxPackage -Path $package.FullName -ForceApplicationShutdown -ForceUpdateFromAnyVersion
 }
-Write-Host "installed: start 'SwanStation Xbox' from the Start menu."
+Write-Host "installed: start 'SwanStationUWP' from the Start menu."
 Write-Host "log: $env:LOCALAPPDATA\Packages\SwanStationXbox_*\LocalState\SwanStation\logs\SwanStationPS5.log"

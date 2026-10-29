@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the PS5 build's network shares (libnfs) and NTFS disk reader have no counterpart in a UWP
+ * SwanStationUWP - the PS5 build's network shares (libnfs) and NTFS disk reader have no counterpart in a UWP
  * package: these keep the frontend's calls in place and report "nothing mounted". Games come from the app's own
  * folder and from drives the user has given the app access to.
  * SPDX-License-Identifier: GPL-3.0-or-later

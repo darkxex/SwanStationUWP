@@ -15,9 +15,9 @@
 #include <stdint.h>
 
 #define SwanStationPS5_NAME "SwanStationXbox"           /* identifiers: the User-Agent of network requests, the Vulkan application name */
-#define SwanStationPS5_TITLE "SwanStation Xbox" /* what is shown on screen */
+#define SwanStationPS5_TITLE "SwanStationUWP" /* what is shown on screen */
 #define SwanStationPS5_TITLE_ID "PPSA98510"
-#define SwanStationPS5_VERSION "1.6.0"
+#define SwanStationPS5_VERSION "1.0.0"
 #define SwanStationPS5_PATH_MAX 512
 
 /* Pad bits use RetroPad numbering so the host can hand the mask to the core

@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - the UWP application shell: a CoreApplication view whose Run() hosts the frontend's main loop.
+ * SwanStationUWP - the UWP application shell: a CoreApplication view whose Run() hosts the frontend's main loop.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include <winrt/Windows.ApplicationModel.h>
@@ -7,8 +7,10 @@
 #include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Graphics.Display.h>
 #include <winrt/Windows.Graphics.Display.Core.h>
 #include <winrt/Windows.Storage.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.System.Profile.h>
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.ViewManagement.h>
@@ -28,6 +30,7 @@ using namespace winrt::Windows::UI::Core;
 using namespace winrt::Windows::UI::ViewManagement;
 
 static volatile bool quit_requested;
+static volatile LONG window_resized;
 static void (*suspend_handler)(void);
 static std::string install_folder, local_folder;
 
@@ -45,6 +48,28 @@ static std::string utf8_forward(winrt::hstring const &path)
 extern "C" const char *uwp_install_folder(void) { return install_folder.c_str(); }
 extern "C" const char *uwp_local_folder(void) { return local_folder.c_str(); }
 extern "C" bool uwp_quit_requested(void) { return quit_requested; }
+extern "C" bool uwp_take_window_resized(void) { return InterlockedExchange(&window_resized, 0) != 0; }
+
+extern "C" bool uwp_window_pixels(int *width, int *height)
+{
+    try
+    {
+        auto window = CoreWindow::GetForCurrentThread();
+        if (!window)
+            return false;
+        auto bounds = window.Bounds();
+        double scale = Windows::Graphics::Display::DisplayInformation::GetForCurrentView().RawPixelsPerViewPixel();
+        if (scale < 0.5)
+            scale = 1.0;
+        *width = (int)(bounds.Width * scale + 0.5);
+        *height = (int)(bounds.Height * scale + 0.5);
+        return *width > 0 && *height > 0;
+    }
+    catch (winrt::hresult_error const &)
+    {
+        return false;
+    }
+}
 extern "C" void uwp_set_suspend_handler(void (*handler)(void)) { suspend_handler = handler; }
 
 extern "C" void uwp_pump_events(void)
@@ -130,6 +155,20 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void SetWindow(CoreWindow const &window)
     {
         window.Closed([](CoreWindow const &, CoreWindowEventArgs const &) { quit_requested = true; });
+        window.SizeChanged([](CoreWindow const &, WindowSizeChangedEventArgs const &) {
+            InterlockedExchange(&window_resized, 1);
+        });
+        // F11 toggles full screen (the swap chain follows the new size through SizeChanged)
+        window.KeyDown([](CoreWindow const &, KeyEventArgs const &args) {
+            if (args.VirtualKey() != Windows::System::VirtualKey::F11 || args.KeyStatus().WasKeyDown)
+                return;
+            auto view = ApplicationView::GetForCurrentView();
+            if (view.IsFullScreenMode())
+                view.ExitFullScreenMode();
+            else
+                view.TryEnterFullScreenMode();
+            args.Handled(true);
+        });
         // The whole screen, not the TV's safe area
         auto view = ApplicationView::GetForCurrentView();
         view.SetDesiredBoundsMode(ApplicationViewBoundsMode::UseCoreWindow);

@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - libretro host.
+ * SwanStationUWP - libretro host.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * SwanStation is a DLL of the package (swanstation_libretro.dll, loaded with LoadPackagedLibrary: a UWP app may load

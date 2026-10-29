@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - minimal HTTPS client on WinHTTP (the same three calls as net.h's libcurl version, which the PS5
+ * SwanStationUWP - minimal HTTPS client on WinHTTP (the same three calls as net.h's libcurl version, which the PS5
  * build used; a UWP package has no libcurl and the system already carries the certificates).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

@@ -1,4 +1,4 @@
-/* SwanStation Xbox: gettimeofday on the Win32 clock. SPDX-License-Identifier: GPL-3.0-or-later */
+/* SwanStationUWP: gettimeofday on the Win32 clock. SPDX-License-Identifier: GPL-3.0-or-later */
 #pragma once
 #include <winsock2.h>
 #include <time.h>

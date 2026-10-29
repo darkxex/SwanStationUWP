@@ -1,5 +1,5 @@
 /*
- * SwanStation Xbox - Vulkan without the Khronos loader: Mesa's Dozen (vulkan_dzn.dll, Vulkan on Direct3D 12) ships in
+ * SwanStationUWP - Vulkan without the Khronos loader: Mesa's Dozen (vulkan_dzn.dll, Vulkan on Direct3D 12) ships in
  * the package and exports only the ICD entry points, so every command is looked up through vk_icdGetInstanceProcAddr.
  * (A UWP app has no system vulkan-1.dll to use.)
  * SPDX-License-Identifier: GPL-3.0-or-later
