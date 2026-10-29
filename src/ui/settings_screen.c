@@ -328,17 +328,17 @@ static const Row SYSTEM[] = {
 };
 
 static const Row ABOUT[] = {
-    {"SwanStation", "Version", "PlayStation X Super 5: PS1 emulation for jailbroken Xbox, built on SwanStation.",
+    {"SwanStation", "Version", "SwanStationUWP: PlayStation 1 emulation for Xbox and Windows, built on SwanStation.",
      K_INFO, APPLY_NOW, SP_VERSION, true, NO_FIELD, NULL, 0, 0},
     {NULL, "BIOS", "SwanStation never includes a BIOS: use a dump of your own console, or the built-in one.",
      K_INFO, APPLY_NOW, SP_BIOS, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Games", "Games are your own backups, in LocalState/SwanStation/games.", K_INFO, APPLY_NOW, SP_GAMES,
      true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Drives", "The extended storage and USB drives found, with their free space.", K_INFO, APPLY_NOW,
+    {NULL, "Drives", "The drives found, with their free space.", K_INFO, APPLY_NOW,
      SP_DRIVES, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Data folder", "Saves, states, covers and settings live here.", K_INFO, APPLY_NOW, SP_DATA,
      true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Created by", "The person behind SwanStationPS5.", K_INFO, APPLY_NOW, SP_CREDITS, true, NO_FIELD, NULL, 0,
+    {NULL, "Created by", "The person behind SwanStationUWP.", K_INFO, APPLY_NOW, SP_CREDITS, true, NO_FIELD, NULL, 0,
      0},
 };
 

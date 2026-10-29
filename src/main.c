@@ -1914,25 +1914,6 @@ int main(int argc, char **argv)
     char video_out[8] = "";
     config_peek_string(app.paths.config, "video_out", video_out, sizeof(video_out));
     const bool high_refresh = atoi(video_out) == 1;
-#if !defined(SwanStationXbox_UWP) /* the PS5 reads its 120 Hz mode from the title's param.json; the Xbox is asked through the TV's display modes */
-    if (high_refresh)
-    {
-        static const char *const params[] = {"/mnt/sandbox/PPSA98510_000/app0/sce_sys/param.json", "/app0/sce_sys/param.json",
-                                             "/data/homebrew/PPSA98510/sce_sys/param.json"};
-        for (size_t i = 0; i < sizeof(params) / sizeof(params[0]); ++i)
-        {
-            FILE *f = fopen(params[i], "rb");
-            if (!f)
-                continue;
-            fclose(f);
-            setenv("PS5_VIDEOOUT_PARAM_JSON", params[i], 0);
-            SwanStationPS5_log("screen: param.json for the 120 Hz mode: %s", params[i]);
-            break;
-        }
-    }
-    else
-        setenv("PS5_VIDEOOUT_PARAM_JSON", "/nonexistent", 1);
-#endif
     plat_want_high_refresh(high_refresh);
     plat_want_output(2); /* always 4K (1080p when the TV lacks the mode) */
 
@@ -1970,8 +1951,7 @@ int main(int argc, char **argv)
         remove(probe);
     }
     else
-        snprintf(app.storage_error, sizeof(app.storage_error),
-                 "%s isn't writable. Is the HEN running? (%s)", app.paths.root, app.sandbox_reason);
+        snprintf(app.storage_error, sizeof(app.storage_error), "%s isn't writable.", app.paths.root);
     ps5_crash_install(log_path);
 #if defined(__PROSPERO__)
     /* the log's stderr lines go to klog: nc <Xbox IP> 3232 shows them live */

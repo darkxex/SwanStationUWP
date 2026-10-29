@@ -304,19 +304,17 @@ const char *shelf_game_title(const Game *g)
     return display_title(g);
 }
 
-/* "Folder: '/data'": where the game is loaded from ("/data", "/mnt/ext1", "/mnt/usb0"...); "" when unknown */
+/* "Folder: 'F:/psx'": where the game is loaded from (the drive and its first folder); "" when unknown */
 void shelf_folder_tag(const Game *g, char *out, size_t size)
 {
     const char *p = g->path;
-    int slashes = strncmp(p, "/mnt/", 5) == 0 ? 3 : 2; /* mounts: the first two parts, else the first */
+    int slashes = 2; /* the first two parts of the path: the drive and its first folder */
     size_t n = 0;
     for (; p[n]; ++n)
         if (p[n] == '/' && --slashes == 0)
             break;
     out[0] = '\0';
-    if (!strncmp(p, "/discplay/", 10))
-        snprintf(out, size, "%s", tr("Play from disc"));
-    else if (n > 0 && n < 24)
+    if (n > 0 && n < 24)
         snprintf(out, size, "%s: '%.*s'", tr("Folder"), (int)n, p);
 }
 
@@ -703,8 +701,7 @@ static void draw_details(const Game *g, float t)
     str_copy(where, sizeof(where), g->folder);
     {
         char *last = strrchr(where, '/');
-        if (last && strcmp(last + 1, "games") != 0 && strcmp(last + 1, "SwanStation") != 0 &&
-            strcmp(last + 1, "PSXS5") != 0)
+        if (last && strcmp(last + 1, "games") != 0 && strcmp(last + 1, "SwanStation") != 0)
             *last = '\0'; /* a game's own folder: its parent is the games folder */
     }
     /* what DuckStation's database knows: genre, release, players */
@@ -1886,7 +1883,7 @@ void shelf_screen(uint32_t pressed)
         if (!circle)
         {
             if (armed && hold > 0.0f && hold < QUIT_HOLD) /* a tap, not a hold */
-                app_toast("Hold to exit SwanStationPS5...");
+                app_toast("Hold to exit SwanStationUWP...");
             hold = 0.0f, armed = false;
         }
         else if (hold == 0.0f && !armed)
@@ -2275,7 +2272,7 @@ void shelf_screen(uint32_t pressed)
     if (S.quit_hold > 0.5f)
     {
         /* O held for a while: a bar fills up to the close */
-        const char *msg = tr("Keep holding to close SwanStationPS5...");
+        const char *msg = tr("Keep holding to close SwanStationUWP...");
         float w = text_width(26, FONT_REGULAR, msg) + 96, h = 84;
         float x = (plat_width() - w) * 0.5f, y = plat_height() - 300;
         draw_rrect(x, y, w, h, TH_RADIUS_SMALL, 0xf0000000u | (TH_PILL & 0xffffffu));

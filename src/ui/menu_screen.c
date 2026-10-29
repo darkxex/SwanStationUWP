@@ -636,15 +636,13 @@ void cheats_screen(uint32_t pressed)
     if (cl->count == 0)
     {
         float bw = 1300, bx = (plat_width() - bw) * 0.5f, by = 360;
-        draw_rrect(bx, by, bw, 260, TH_RADIUS, TH_CARD);
+        draw_rrect(bx, by, bw, 230, TH_RADIUS, TH_CARD);
         icon_draw(ICON_CODE, plat_width() * 0.5f - 32, by + 32, 64, TH_FOCUS);
         text_draw(plat_width() * 0.5f, by + 112, 34, FONT_BOLD, TH_TEXT, ALIGN_CENTER,
                   tr("No cheats for this game"));
         char where[SwanStationPS5_PATH_MAX + 64];
         snprintf(where, sizeof(where), tr("Put .cht files in %s, or one next to the game."), app.paths.cheats);
         text_draw_fit(plat_width() * 0.5f, by + 168, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, bw - 80, where);
-        text_draw(plat_width() * 0.5f, by + 206, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                  tr("tools/SwanStationPS5_sync.py cheats installs the libretro cheat library."));
     }
     else
     {

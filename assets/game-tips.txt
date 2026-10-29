@@ -1,4 +1,4 @@
-# SwanStationPS5 per-game tips, shown in the shelf's Details panel.
+# SwanStationUWP per-game tips, shown in the shelf's Details panel.
 # title<TAB>region (any, US, EU or JP: the disc's serial)<TAB>tip
 # The title is compared word by word, as the cheat matching does (no
 # punctuation, roman numerals as digits). Add only what is sure.
@@ -11,11 +11,11 @@ Crash Team Racing	any	Up to 4 players: Settings > Controls > Players > Up to 4 (
 Crash Bash	any	Up to 4 players: Settings > Controls > Players > Up to 4 (multitap).
 Bomberman World	any	Up to 4 players: Settings > Controls > Players > Up to 4 (multitap).
 Bomberman Party Edition	any	Up to 4 players: Settings > Controls > Players > Up to 4 (multitap).
-Micro Machines V3	any	Up to 4 players in SwanStationPS5 with the multitap (Settings > Controls > Players).
-Time Crisis	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Time Crisis Project Titan	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Point Blank	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Point Blank 2	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Point Blank 3	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Elemental Gearbolt	any	Made for a light gun, which SwanStationPS5 doesn't support yet.
-Vib Ribbon	any	On a real console it builds levels from music CDs; SwanStationPS5 can't load audio CDs, so only its own songs play.
+Micro Machines V3	any	Up to 4 players: Settings > Controls > Players > Up to 4 (multitap).
+Time Crisis	any	Made for a light gun, which SwanStation doesn't support yet.
+Time Crisis Project Titan	any	Made for a light gun, which SwanStation doesn't support yet.
+Point Blank	any	Made for a light gun, which SwanStation doesn't support yet.
+Point Blank 2	any	Made for a light gun, which SwanStation doesn't support yet.
+Point Blank 3	any	Made for a light gun, which SwanStation doesn't support yet.
+Elemental Gearbolt	any	Made for a light gun, which SwanStation doesn't support yet.
+Vib Ribbon	any	On a real console it builds levels from music CDs; SwanStation can't load audio CDs, so only its own songs play.
