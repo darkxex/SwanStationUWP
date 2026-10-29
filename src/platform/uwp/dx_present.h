@@ -25,6 +25,7 @@ double dxp_display_hz(void); /* the screen's refresh rate (0 when unknown) */
 void dxp_want_size(int width, int height);   /* before dxp_open: the screen's mode (kept for the window) */
 void dxp_want_extent(int width, int height); /* before dxp_open: the window's size in pixels, for the swap chain */
 void dxp_want_high_refresh(bool on);
+void dxp_force_resize(void); /* the next dxp_resize rebuilds the buffers even if the size is the same */
 bool dxp_resize(int width, int height, char *error, size_t size); /* the window changed size: the swap chain follows */
 bool dxp_set_mode(int width, int height, char *error, size_t size);
 

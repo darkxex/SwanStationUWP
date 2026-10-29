@@ -61,20 +61,7 @@ extern "C" bool plat_init(void)
     static const int OUTPUT_W[] = {1920, 2560, 3840}, OUTPUT_H[] = {1080, 1440, 2160};
     const int output = output_wanted > 0 && output_wanted < 3 ? output_wanted : 0;
     dxp_want_size(OUTPUT_W[output], OUTPUT_H[output]);
-    // The window of a UWP app on the console is 1080p until the app asks for the TV's mode: the swap chain follows the
-    // window, so the mode is asked for first (a TV without it stays as it is; a PC has no mode to ask for)
-    {
-        int mode_w = 0, mode_h = 0;
-        double mode_hz = 0;
-        if (uwp_current_display_mode(&mode_w, &mode_h, &mode_hz) && (mode_w != OUTPUT_W[output] || mode_h != OUTPUT_H[output]))
-        {
-            if (uwp_request_display_mode(OUTPUT_W[output], OUTPUT_H[output], mode_hz > 0 ? mode_hz : 60.0))
-                SwanStationPS5_log("screen: the TV is now at %dx%d", OUTPUT_W[output], OUTPUT_H[output]);
-            else
-                SwanStationPS5_log("screen: the TV has no %dx%d mode at %.0f Hz: staying at %dx%d", OUTPUT_W[output],
-                                   OUTPUT_H[output], mode_hz, mode_w, mode_h);
-        }
-    }
+    // The app takes the console's output as it is (Settings → Video output): it does not ask for a mode of its own
     int win_w = 0, win_h = 0;
     if (uwp_window_pixels(&win_w, &win_h))
         dxp_want_extent(win_w, win_h);
@@ -177,6 +164,18 @@ extern "C" void plat_poll(PadState pads[SwanStationPS5_MAX_PADS], bool *quit)
         *quit = true;
     // The window's SizeChanged event, and a look every half second in case it does not come (the console's TV modes)
     static unsigned polls;
+    // Once, a second after the loop starts (RetroArch-UWP does the same: "needed for the right scale on Xbox"): ask again
+    // for the whole screen, rebuild the swap chain's buffers, and log what the system says of the window
+    static bool settled;
+    if (gpu_ui && !settled && polls == 60)
+    {
+        settled = true;
+        char info[400];
+        uwp_describe_window(info, sizeof(info));
+        SwanStationPS5_log("screen: after start, %s; swap chain %s", info, dxp_describe());
+        uwp_reassert_fullscreen();
+        dxp_force_resize();
+    }
     const bool resized = uwp_take_window_resized();
     if (gpu_ui && (resized || ++polls % 30 == 0))
     {
@@ -488,11 +487,7 @@ extern "C" bool plat_set_output(int resolution)
     static const int OUTPUT_W[] = {1920, 2560, 3840}, OUTPUT_H[] = {1080, 1440, 2160};
     if (!gpu_ui || resolution < 0 || resolution > 2)
         return false;
-    // The TV first (the swap chain follows the window, which the console resizes to the TV's mode), then the screen's objects
-    int w = 0, h = 0;
-    double hz = 0;
-    if (uwp_current_display_mode(&w, &h, &hz) && (w != OUTPUT_W[resolution] || h != OUTPUT_H[resolution]))
-        uwp_request_display_mode(OUTPUT_W[resolution], OUTPUT_H[resolution], hz > 0 ? hz : 60.0);
+    // The console's output decides the size; the app does not change the TV's mode
     char error[160];
     if (dxp_set_mode(OUTPUT_W[resolution], OUTPUT_H[resolution], error, sizeof(error)))
         return true;

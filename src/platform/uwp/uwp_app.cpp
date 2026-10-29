@@ -16,6 +16,7 @@
 #include <winrt/Windows.UI.ViewManagement.h>
 
 #include <windows.h>
+#include <stdio.h>
 #include <string>
 
 #include "uwp_app.h"
@@ -99,6 +100,41 @@ extern "C" bool uwp_window_pixels(int *width, int *height)
         return false;
     }
 }
+extern "C" void uwp_describe_window(char *out, size_t size)
+{
+    try
+    {
+        auto window = CoreWindow::GetForCurrentThread();
+        auto view = ApplicationView::GetForCurrentView();
+        auto b = window.Bounds();
+        auto v = view.VisibleBounds();
+        double scale = Windows::Graphics::Display::DisplayInformation::GetForCurrentView().RawPixelsPerViewPixel();
+        int mw = 0, mh = 0;
+        double hz = 0;
+        uwp_current_display_mode(&mw, &mh, &hz);
+        snprintf(out, size, "window bounds %.0fx%.0f at (%.0f,%.0f), visible %.0fx%.0f at (%.0f,%.0f), scale %.3f, full screen %d, TV %dx%d",
+                 b.Width, b.Height, b.X, b.Y, v.Width, v.Height, v.X, v.Y, scale, (int)view.IsFullScreenMode(), mw, mh);
+    }
+    catch (winrt::hresult_error const &)
+    {
+        snprintf(out, size, "window: the system gave no information");
+    }
+}
+
+extern "C" void uwp_reassert_fullscreen(void)
+{
+    try
+    {
+        auto view = ApplicationView::GetForCurrentView();
+        view.SetDesiredBoundsMode(ApplicationViewBoundsMode::UseCoreWindow);
+        view.TryEnterFullScreenMode();
+        InterlockedExchange(&window_resized, 1);
+    }
+    catch (winrt::hresult_error const &)
+    {
+    }
+}
+
 extern "C" void uwp_set_suspend_handler(void (*handler)(void)) { suspend_handler = handler; }
 
 extern "C" void uwp_pump_events(void)

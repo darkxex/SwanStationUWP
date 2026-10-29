@@ -108,6 +108,7 @@ struct Screen
     retro_hw_render_interface_d3d11 core = {};
 };
 Screen S;
+bool force_resize; // the next dxp_resize rebuilds the buffers even at the same size
 
 #define CHECK(call, what)                                                                                              \
     do                                                                                                                 \
@@ -269,6 +270,7 @@ void quad(float x, float y, float w, float h, float v0, float v1, uint32_t argb,
 extern "C"
 {
 void dxp_want_size(int, int) {}
+void dxp_force_resize(void) { force_resize = true; }
 void dxp_want_extent(int width, int height)
 {
     S.want_ext_w = width;
@@ -411,7 +413,9 @@ void dxp_close(void)
 
 bool dxp_resize(int width, int height, char *error, size_t size)
 {
-    if (!S.swapchain || width <= 0 || height <= 0 || (width == S.width && height == S.height))
+    const bool forced = force_resize;
+    force_resize = false;
+    if (!S.swapchain || width <= 0 || height <= 0 || (!forced && width == S.width && height == S.height))
         return true;
     S.context->OMSetRenderTargets(0, nullptr, nullptr);
     S.target.Reset();

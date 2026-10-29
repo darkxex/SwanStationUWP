@@ -34,6 +34,10 @@ bool uwp_open_file_access_settings(void);
 /* The window's size in pixels (its size in view units times the screen's scale); false while there is no window. */
 bool uwp_window_pixels(int *width, int *height);
 bool uwp_current_display_mode(int *width, int *height, double *hz);
+/* What the system says of the window (bounds, visible bounds, scale, full screen, TV mode), for the log. */
+void uwp_describe_window(char *out, size_t size);
+/* Asks again for the whole screen (bounds of the core window, full screen): RetroArch-UWP reacts after the loop starts. */
+void uwp_reassert_fullscreen(void);
 
 #ifdef __cplusplus
 }

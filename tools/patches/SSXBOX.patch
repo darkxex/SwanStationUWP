@@ -201,3 +201,19 @@ diff --git a/src/common/file_system.cpp b/src/common/file_system.cpp
    free(a);
    if (hFind == INVALID_HANDLE_VALUE)
      return 0;
+diff --git a/src/core/gpu_hw_d3d11.cpp b/src/core/gpu_hw_d3d11.cpp
+index 884ae056..e72236dc 100644
+--- a/src/core/gpu_hw_d3d11.cpp
++++ b/src/core/gpu_hw_d3d11.cpp
+@@ -352,6 +352,11 @@ bool LibretroD3D11HostDisplay::Render()
+   m_context->PSSetShaderResources(0, 1, &null_srv);
+   m_context->OMSetRenderTargets(1u, m_framebuffer.GetD3DRTVArray(), nullptr);
+ 
++  // The picture only covers the draw rectangle: what lies outside it (borders of a different aspect ratio, the part
++  // left by a previous, larger picture) must be black, not what was drawn there before.
++  static constexpr std::array<float, 4> border_color = {0.0f, 0.0f, 0.0f, 1.0f};
++  m_context->ClearRenderTargetView(m_framebuffer.GetD3DRTV(), border_color.data());
++
+   {
+     const auto [left, top, width, height] = CalculateDrawRect(display_width, display_height, 0, false);
+     RenderDisplay(left, top, width, height, m_display_texture_handle, m_display_texture_width, m_display_texture_height,
