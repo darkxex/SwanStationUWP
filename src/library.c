@@ -484,7 +484,7 @@ static void scan_root(Library *lib, const char *root)
     struct dirent *e;
     while ((e = readdir(d)) && n < MAX_ROOT_ENTRIES)
     {
-        if (e->d_name[0] == '.')
+        if (e->d_name[0] == '.' || !str_icmp(e->d_name, "bios")) /* a bios folder is not a game */
             continue;
         str_copy(entries[n++], sizeof(NameBuf), e->d_name);
     }

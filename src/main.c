@@ -360,8 +360,8 @@ void app_state_path(char *out, size_t size, int slot)
 }
 
 /* The BIOS a region will run, from the choice in Console (core): that file when it is in bios/ (OpenBIOS is built into
- * the core, so it needs no file); with Auto, or a file that is gone, what the core does: the BIOS the folder holds, or
- * OpenBIOS when it holds none. */
+ * the core, so it needs no file); with Auto, or a file that is gone, the BIOS of that region when the folder has one, else any it
+ * holds, or OpenBIOS when it holds none. */
 static void bios_for_region(const char *key, char *out, size_t size)
 {
     for (int i = 0; i < SS_OPT_COUNT; ++i)
@@ -381,19 +381,10 @@ static void bios_for_region(const char *key, char *out, size_t size)
             str_copy(out, size, "OpenBIOS");
             return;
         }
-        str_copy(out, size, "OpenBIOS");
-        DIR *d = opendir(app.paths.bios); /* Auto, or a file that is not there: the core uses what the folder holds */
-        if (d)
-        {
-            struct dirent *e;
-            while ((e = readdir(d)))
-                if (str_icmp(path_ext(e->d_name), "bin") == 0)
-                {
-                    str_copy(out, size, e->d_name);
-                    break;
-                }
-            closedir(d);
-        }
+        /* Auto, or a file that is gone: what the core will run (see bios_auto_file) */
+        bool core_finds;
+        const char *auto_file = bios_auto_file(i, &core_finds);
+        str_copy(out, size, auto_file ? auto_file : "OpenBIOS");
         return;
     }
     str_copy(out, size, "?");
@@ -891,27 +882,22 @@ static bool bios_dir_really_has_bin(const char *dir)
     return found;
 }
 
-/* The BIOS is looked for in the app's own bios folder; when that holds none, in <drive>/<Games folder>/bios and
- * <drive>/SwanStation/bios on every drive (a USB with psx/bios/ beside psx/<games>), and the first folder with a .bin
- * becomes the BIOS folder: the core is told it as its system directory. Before the settings are read. */
+/* The BIOS is looked for in the app's own bios folder; when that holds none, in <drive>/bios and
+ * <drive>/SwanStation/bios on every drive (a USB with bios/ beside psx/, not inside it: a folder of the games folder
+ * would be taken for a game), and the first folder with a .bin becomes the BIOS folder: the core is told it as its
+ * system directory. The core takes the BIOS of the game's region from it (scph5500 for Japan, 5501 USA, 5502 Europe).
+ * Before the settings are read. */
 static void bios_use_drive_dir(void)
 {
     if (bios_dir_really_has_bin(app.paths.bios))
         return;
-    char folder[48] = "psx";
-    config_peek_string(app.paths.config, "usb_folder", folder, sizeof(folder));
     char letters[DRIVE_COUNT][4];
     const int total = drives_present(letters);
     for (int d = 0; d < total; ++d)
         for (int k = 0; k < 2; ++k)
         {
             char dir[SwanStationPS5_PATH_MAX];
-            if (k == 0 && !folder[0])
-                continue;
-            if (k == 0)
-                snprintf(dir, sizeof(dir), "%s/%s/bios", letters[d], folder);
-            else
-                snprintf(dir, sizeof(dir), "%s/SwanStation/bios", letters[d]);
+            snprintf(dir, sizeof(dir), k == 0 ? "%s/bios" : "%s/SwanStation/bios", letters[d]);
             if (!bios_dir_really_has_bin(dir))
                 continue;
             str_copy(app.paths.bios, sizeof(app.paths.bios), dir);

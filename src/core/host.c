@@ -321,6 +321,15 @@ static void apply_swanstation_options(const Settings *s)
     {
         int v = s->ss_opt[i];
         const char *value = ss_opt_value(i, v);
+        if (ss_opt_is_bios(i) && !value[0])
+        {
+            /* Auto: the core finds the BIOS of the game's region by itself; with none for it, it is given the one the
+             * folder has (a USB with only an American BIOS runs a Japanese game with it, not with OpenBIOS) */
+            bool core_finds;
+            const char *file = bios_auto_file(i, &core_finds);
+            if (file && !core_finds)
+                value = file;
+        }
         if (!strcmp(SS_OPTS[i].key, "swanstation_Display_ShowOSDMessages"))
         {
             /* the core always says its messages (the light bar follows the analog mode by them); whether they are

@@ -76,6 +76,31 @@ static const char *describe(int index)
     return names[index];
 }
 
+/* The region of the BIOS in names[index]: the last letter of its description, "(v3.0 09-09-96 J)": 'J' Japan, 'A'
+ * America, 'E' Europe; 0 when the contents are not a BIOS it knows (or the model carries no letter). Read once. */
+static char region_of(int index)
+{
+    static char cache[MAX_CHOICES];
+    static bool known[MAX_CHOICES];
+    if (known[index])
+        return cache[index];
+    known[index] = true;
+    cache[index] = 0;
+    char path[SwanStationPS5_PATH_MAX], hex[33];
+    path_join(path, sizeof(path), bios_dir, names[index]);
+    if (!bios_dir[0] || !md5_of_file(path, hex))
+        return 0;
+    for (size_t k = 0; k < sizeof(KNOWN) / sizeof(KNOWN[0]); ++k)
+        if (strcmp(hex, KNOWN[k].md5) == 0)
+        {
+            const char *end = strrchr(KNOWN[k].description, ')');
+            if (end && end > KNOWN[k].description + 1 && end[-2] == ' ' && strchr("JAE", end[-1]))
+                cache[index] = end[-1];
+            break;
+        }
+    return cache[index];
+}
+
 static void init(void)
 {
     if (count)
@@ -143,6 +168,31 @@ int ss_opt_find(int opt, const char *value, bool add)
 static int by_name(const void *a, const void *b)
 {
     return str_icmp((const char *)a, (const char *)b);
+}
+
+const char *bios_auto_file(int opt, bool *core_finds)
+{
+    init();
+    if (!ss_opt_is_bios(opt))
+        return NULL;
+    const char *key = SS_OPTS[opt].key;
+    const char want = strstr(key, "NTSCJ") ? 'J' : strstr(key, "NTSCU") ? 'A' : strstr(key, "PAL") ? 'E' : 0;
+    int fallback = -1, unknown = -1;
+    for (int v = 2; v < count; ++v) /* 0 is Auto, 1 the OpenBIOS: the files are after them */
+    {
+        const char r = region_of(v);
+        if (r && r == want)
+        {
+            *core_finds = true;
+            return names[v];
+        }
+        if (r && fallback < 0)
+            fallback = v;
+        if (!r && unknown < 0)
+            unknown = v;
+    }
+    *core_finds = false;
+    return fallback >= 0 ? names[fallback] : unknown >= 0 ? names[unknown] : NULL;
 }
 
 void bios_choices_scan(const char *dir)

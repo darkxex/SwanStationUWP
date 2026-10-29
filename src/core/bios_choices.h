@@ -20,5 +20,10 @@ const char *const *ss_opt_labels(int opt);         /* what the menu shows */
 int ss_opt_find(int opt, const char *value, bool add);
 /* Appends the .bin files of the folder not listed yet. */
 void bios_choices_scan(const char *dir);
+/* What Auto means for a BIOS option: the folder's BIOS of the option's region when there is one (the core finds it by
+ * itself: *core_finds true), else any BIOS the folder holds, which the core must be given by name (false). NULL when the
+ * folder holds no BIOS: the core runs its OpenBIOS. The core only looks for the region's own BIOS, so a folder with just
+ * an American one would run OpenBIOS for a Japanese game. */
+const char *bios_auto_file(int opt, bool *core_finds);
 
 #endif

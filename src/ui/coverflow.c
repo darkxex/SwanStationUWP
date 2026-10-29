@@ -2146,18 +2146,31 @@ void shelf_screen(uint32_t pressed)
     }
     else
     {
-        float w = 1200, x = CENTER_X - w * 0.5f, y = 300, h = 330;
+        /* what the search does (app_rescan, bios_use_drive_dir): the games folder of the app and, on every drive, the
+         * Games folder on drives name, SwanStation/games; the BIOS in the app's folder and, on every drive, bios */
+        float w = 1200, x = CENTER_X - w * 0.5f, y = 300, h = 410;
         draw_rrect(x, y, w, h, TH_RADIUS, TH_CARD_SOFT);
         icon_draw(ICON_DISC, CENTER_X - 32, y + 30, 64, TH_FOCUS);
         text_draw(CENTER_X, y + 108, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("Your shelf is empty"));
-        char line[SwanStationPS5_PATH_MAX + 64];
-        snprintf(line, sizeof(line), tr("Games: %s/<Game name>/"), app.paths.games);
-        text_draw_fit(CENTER_X, y + 156, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
-        text_draw_fit(CENTER_X, y + 190, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 40,
-                      tr("Copy your games into that folder."));
-        snprintf(line, sizeof(line), tr("BIOS (optional): %s/"), app.paths.bios);
-        text_draw_fit(CENTER_X, y + 226, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
-        text_draw_fit(CENTER_X, y + 274, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80,
+        char line[SwanStationPS5_PATH_MAX + 96], where[SwanStationPS5_PATH_MAX];
+        float ly = y + 156;
+        if (app.global.usb_folder[0])
+        {
+            snprintf(line, sizeof(line), tr("Games: X:/%s/<Game name>/ on any drive"), app.global.usb_folder);
+            text_draw_fit(CENTER_X, ly, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
+            ly += 34;
+        }
+        text_draw_fit(CENTER_X, ly, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 40,
+                      tr("Also in X:/SwanStation/games/ and in the app's folder:"));
+        snprintf(where, sizeof(where), "%s/", app.paths.games);
+        text_draw_fit(CENTER_X, ly + 30, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 40, where);
+        ly += 76;
+        text_draw_fit(CENTER_X, ly, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40,
+                      tr("BIOS (optional): X:/bios/ on any drive"));
+        snprintf(where, sizeof(where), "%s/bios", app.paths.root);
+        snprintf(line, sizeof(line), tr("or in the app's folder: %s/"), where);
+        text_draw_fit(CENTER_X, ly + 32, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 40, line);
+        text_draw_fit(CENTER_X, y + h - 62, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80,
                       tr("Then choose Settings > Rescan library."));
     }
 
