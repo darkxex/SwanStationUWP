@@ -72,6 +72,7 @@ enum Special
     SP_WHO,
     SP_HDTEX, /* drives the two core options for texture packs */
     SP_USBFOLDER, /* the games folder on USB drives, typed */
+    SP_FILE_ACCESS, /* opens Windows' page that lets the app read the drives; the value says if it is blocked */
     SP_DRIVES,    /* the extended and USB drives found, with their free space */
 };
 
@@ -298,8 +299,10 @@ static const Row LIBRARY[] = {
 static const Row SYSTEM[] = {
     {"SwanStation", "Start BIOS", "Starts the console's BIOS with no disc, to manage memory cards. While Memory Card 1 Type (Restart) is set to Libretro, the saves will not show: that card belongs to each game, and with no game there is none.",
      K_ACTION, APPLY_NOW, SP_BIOS_START, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Games folder on drives", "A folder name to look for games in on drives. It is looked for on /mnt/ext0/, /mnt/ext1/ and /mnt/usb0/ to /mnt/usb7/ at once, as the number changes with the drives plugged in: psx searches /mnt/usb0/psx, /mnt/usb1/psx and so on. Leave it empty to turn it off.",
+    {NULL, "Games folder on drives", "A folder name to look for games in on every drive: psx searches D:/psx, E:/psx and so on. Leave it empty to turn it off.",
      K_ACTION, APPLY_NOW, SP_USBFOLDER, true, NO_FIELD, NULL, 0, 0},
+    {NULL, "File access", "Windows has to let the app read your drives and USB sticks (Settings > Privacy > File system). This opens that page: turn the app on, then open the app again.",
+     K_ACTION, APPLY_NOW, SP_FILE_ACCESS, true, NO_FIELD, NULL, 0, 0},
     {"Emulation", "Region", "Auto follows the disc; force 50 or 60 Hz, or the Japanese console, if a game misbehaves.", K_CHOICE,
      APPLY_NEXT_GAME, SP_NONE, false, INT_FIELD(region), REGIONS, 3, 0},
     {NULL, "Fast CD loading", "Shorter loading screens; the higher, the faster. Rarely, a game glitches.", K_CHOICE, APPLY_NOW,
@@ -1117,6 +1120,7 @@ static const char *value_label(const Row *r, char *buf, size_t size)
     case SP_CREDITS: return "AngelXex";
     case SP_HOTKEYS: return tr("{View button} + {R2} / {L2}");
     case SP_USBFOLDER: return app.global.usb_folder[0] ? app.global.usb_folder : tr("Off");
+    case SP_FILE_ACCESS: return app.file_access_denied ? tr("Blocked") : tr("Allowed");
     default: break;
     }
     if (!r->labels || v < 0 || v >= r->count)
@@ -1937,7 +1941,7 @@ static void draw_rows(void)
         }
         case K_ACTION:
             icon_draw(ICON_CHEVRON_RIGHT, right - 36, ry + 21, 34, TH_TEXT_SOFT);
-            if (r->special == SP_USBFOLDER)
+            if (r->special == SP_USBFOLDER || r->special == SP_FILE_ACCESS)
                 text_draw_fit(right - 50, ry + 24, 22, FONT_REGULAR, TH_TEXT_SOFT, ALIGN_RIGHT, w - 520,
                               value_label(r, buf, sizeof(buf)));
             break;
@@ -2011,10 +2015,15 @@ static void activate(const Row *r)
         sfx_play(SFX_SELECT);
         library_stats_open(SCREEN_SETTINGS);
         return;
+    case SP_FILE_ACCESS:
+        sfx_play(SFX_SELECT);
+        app_toast(plat_open_file_access_settings() ? "Turn the app on on that page, then open it again"
+                                                    : "That page cannot be opened here");
+        return;
     case SP_USBFOLDER:
         sfx_play(SFX_SELECT);
         textinput_open(SCREEN_SETTINGS, "Games folder on drives",
-                       "Type the folder name: games are looked for on /mnt/ext0/, /mnt/ext1/ and /mnt/usb0/ to /mnt/usb7/",
+                       "Type the folder name: games are looked for in X:/<name> on every drive",
                        app.global.usb_folder, usb_folder_set);
         return;
     case SP_BIOS_START:

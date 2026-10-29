@@ -466,6 +466,7 @@ extern "C" void plat_set_framegen(int generated, double core_hz, double speed, b
     vkp_set_framegen(generated, core_hz, speed, nominal);
 }
 extern "C" void plat_want_output(int resolution) { output_wanted = resolution; }
+extern "C" bool plat_open_file_access_settings(void) { return uwp_open_file_access_settings(); }
 extern "C" bool plat_gpu_ui_active(void) { return gpu_ui; }
 
 extern "C" bool plat_set_output(int resolution)

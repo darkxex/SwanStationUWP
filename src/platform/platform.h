@@ -45,6 +45,7 @@ void plat_set_framegen(int generated, double core_hz, double speed, bool nominal
 void plat_want_high_refresh(bool on); /* before plat_init: the 120 Hz mode */
 bool plat_gpu_ui_active(void); /* the shelf and the menus are drawn by the GPU (always, once the GPU layer opens) */
 bool plat_set_output(int resolution); /* 0 1080p, 1 1440p, 2 4K, at once (the GPU interface only); false when it can't be done */
+bool plat_open_file_access_settings(void); /* Windows' page that lets the app read every file; false where there is none */
 void plat_want_output(int resolution); /* before plat_init: 0 1080p, 1 1440p, 2 4K (with the GPU interface; 1080p when the TV lacks it) */
 /* The console's time of day as the user set it up ("21:42" or "9:42 PM"). */
 void plat_clock(char *out, size_t size);

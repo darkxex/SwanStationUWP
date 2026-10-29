@@ -29,6 +29,8 @@ const char *uwp_local_folder(void);
 bool uwp_request_display_mode(int width, int height, double hz);
 /* The window changed size since the last call (a PC window resized, the TV's mode changed): true once per change. */
 bool uwp_take_window_resized(void);
+/* Opens Windows' Settings page that lets the app read every file (a PC); false where it does not exist (a console). */
+bool uwp_open_file_access_settings(void);
 /* The window's size in pixels (its size in view units times the screen's scale); false while there is no window. */
 bool uwp_window_pixels(int *width, int *height);
 bool uwp_current_display_mode(int *width, int *height, double *hz);

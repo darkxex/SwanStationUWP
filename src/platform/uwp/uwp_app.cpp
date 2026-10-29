@@ -50,6 +50,24 @@ extern "C" const char *uwp_local_folder(void) { return local_folder.c_str(); }
 extern "C" bool uwp_quit_requested(void) { return quit_requested; }
 extern "C" bool uwp_take_window_resized(void) { return InterlockedExchange(&window_resized, 0) != 0; }
 
+extern "C" bool uwp_open_file_access_settings(void)
+{
+    try
+    {
+        auto op = Windows::System::Launcher::LaunchUriAsync(Uri(L"ms-settings:privacy-broadfilesystemaccess"));
+        for (int waited = 0; op.Status() == AsyncStatus::Started && waited < 40; ++waited)
+        {
+            uwp_pump_events();
+            Sleep(50);
+        }
+        return op.Status() == AsyncStatus::Completed && op.GetResults();
+    }
+    catch (winrt::hresult_error const &)
+    {
+        return false;
+    }
+}
+
 extern "C" bool uwp_window_pixels(int *width, int *height)
 {
     try

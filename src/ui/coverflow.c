@@ -2148,7 +2148,7 @@ void shelf_screen(uint32_t pressed)
     {
         /* what the search does (app_rescan, bios_use_drive_dir): the games in <Games folder on drives>/<game> on any drive
          * (and the app's own folder, SwanStation/games), the BIOS in bios on any drive */
-        float w = 1200, x = CENTER_X - w * 0.5f, y = 300, h = 320;
+        float w = 1200, x = CENTER_X - w * 0.5f, y = 300, h = app.file_access_denied ? 372 : 320;
         draw_rrect(x, y, w, h, TH_RADIUS, TH_CARD_SOFT);
         icon_draw(ICON_DISC, CENTER_X - 32, y + 30, 64, TH_FOCUS);
         text_draw(CENTER_X, y + 108, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("Your shelf is empty"));
@@ -2158,7 +2158,10 @@ void shelf_screen(uint32_t pressed)
         text_draw_fit(CENTER_X, y + 160, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40, line);
         text_draw_fit(CENTER_X, y + 198, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 40,
                       tr("BIOS (optional): X:/bios/ on any drive"));
-        text_draw_fit(CENTER_X, y + 256, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80,
+        if (app.file_access_denied)
+            text_draw_fit(CENTER_X, y + 246, 24, FONT_REGULAR, TH_GOLD, ALIGN_CENTER, w - 40,
+                          tr("Windows is blocking your drives: Settings > System > File access."));
+        text_draw_fit(CENTER_X, y + (app.file_access_denied ? 308 : 256), 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80,
                       tr("Then choose Settings > Rescan library."));
     }
 

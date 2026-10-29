@@ -46,6 +46,7 @@ typedef struct
     char storage_error[256];
     char drive_text[26][40]; /* the drives found when the app started, with their free space */
     int drive_count;
+    bool file_access_denied; /* a drive answered "access denied": Windows has not let the app read the drives */
     bool sandboxed;           /* /data can't be listed: library.txt is the library */
     char sandbox_reason[200];
     float dt;                 /* seconds since the last frame */

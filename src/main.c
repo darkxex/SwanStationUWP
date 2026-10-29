@@ -428,6 +428,23 @@ void app_rescan(void)
     roots[root_count++] = app.paths.games;
     char letters[DRIVE_COUNT][4];
     const int drive_total = drives_present(letters);
+    /* a drive that answers "access denied" (5): Windows has not allowed the app to read the drives (the system drive is
+     * left out: the app's own folders are there) */
+    app.file_access_denied = false;
+    for (int d = 0; d < drive_total; ++d)
+    {
+        if (letters[d][0] == 'C')
+            continue;
+        char drive_root[8];
+        snprintf(drive_root, sizeof(drive_root), "%s/", letters[d]);
+        DIR *drive_probe = opendir(drive_root);
+        if (drive_probe)
+            closedir(drive_probe);
+        else if (uwp_opendir_error() == 5)
+            app.file_access_denied = true;
+    }
+    if (app.file_access_denied)
+        SwanStationPS5_log("drives: access denied: Windows has not allowed the app to read the drives");
     int slot = 0;
     for (int d = 0; d < drive_total; ++d)
     {
