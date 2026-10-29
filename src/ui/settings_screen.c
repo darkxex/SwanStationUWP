@@ -1145,21 +1145,23 @@ typedef struct
 } PadButton;
 
 static const PadButton PAD[] = {
-    {BTN_CROSS, GLYPH_CROSS, "Cross", 230, 46},
-    {BTN_CIRCLE, GLYPH_CIRCLE, "Circle", 290, -14},
-    {BTN_SQUARE, GLYPH_SQUARE, "Square", 170, -14},
-    {BTN_TRIANGLE, GLYPH_TRIANGLE, "Triangle", 230, -74},
-    {BTN_UP, GLYPH_UP, "Up", -230, -70},
-    {BTN_DOWN, GLYPH_DOWN, "Down", -230, 42},
-    {BTN_LEFT, GLYPH_LEFT, "Left", -286, -14},
-    {BTN_RIGHT, GLYPH_RIGHT, "Right", -174, -14},
-    {BTN_L1, GLYPH_L1, "L1", -230, -168},
-    {BTN_R1, GLYPH_R1, "R1", 230, -168},
-    {BTN_L2, GLYPH_L2, "L2", -230, -226},
-    {BTN_R2, GLYPH_R2, "R2", 230, -226},
-    {BTN_L3, GLYPH_L3, "L3 (left stick)", -110, 110},
-    {BTN_R3, GLYPH_R3, "R3 (right stick)", 110, 110},
-    {BTN_START, GLYPH_START, "OPTIONS", 214, -122},
+    /* places on the drawing, from its centre: an Xbox controller's layout (the left stick high, the d-pad low; the face
+     * buttons high, the right stick low), with the bumpers and triggers above the shell */
+    {BTN_CROSS, GLYPH_CROSS, "Cross", 230, 20},
+    {BTN_CIRCLE, GLYPH_CIRCLE, "Circle", 280, -30},
+    {BTN_SQUARE, GLYPH_SQUARE, "Square", 180, -30},
+    {BTN_TRIANGLE, GLYPH_TRIANGLE, "Triangle", 230, -80},
+    {BTN_UP, GLYPH_UP, "Up", -110, 16},
+    {BTN_DOWN, GLYPH_DOWN, "Down", -110, 116},
+    {BTN_LEFT, GLYPH_LEFT, "Left", -160, 66},
+    {BTN_RIGHT, GLYPH_RIGHT, "Right", -60, 66},
+    {BTN_L1, GLYPH_L1, "L1", -235, -144},
+    {BTN_R1, GLYPH_R1, "R1", 235, -144},
+    {BTN_L2, GLYPH_L2, "L2", -235, -207},
+    {BTN_R2, GLYPH_R2, "R2", 235, -207},
+    {BTN_L3, GLYPH_L3, "L3 (left stick)", -230, -30},
+    {BTN_R3, GLYPH_R3, "R3 (right stick)", 110, 70},
+    {BTN_START, GLYPH_START, "OPTIONS", 62, -52},
 };
 #define PAD_COUNT (int)(sizeof(PAD) / sizeof(PAD[0]))
 
@@ -1226,22 +1228,38 @@ static void apply_preset(int preset)
 
 static void draw_controller(float cx, float cy, int highlight)
 {
-    /* a Xbox controller, simplified: body, grips, View button, sticks */
+    /* an Xbox controller seen from above: the shell with a grip on each side going down and out, the bumpers and
+     * triggers over it, the sticks, the d-pad, and the View, Xbox and Menu buttons in the middle */
     const uint32_t body = TH_PILL, edge = theme.light ? TH_DIVIDER : 0xff2f3a80u;
-    draw_rrect(cx - 360, cy - 130, 720, 250, 120, edge);
-    draw_rrect(cx - 354, cy - 124, 708, 238, 116, body);
-    draw_circle(cx - 250, cy + 140, 92, edge);
-    draw_circle(cx + 250, cy + 140, 92, edge);
-    draw_circle(cx - 250, cy + 140, 86, body);
-    draw_circle(cx + 250, cy + 140, 86, body);
-    draw_rrect(cx - 354, cy - 60, 708, 170, 60, body);
-    draw_rrect(cx - 110, cy - 118, 220, 110, 18, TH_BG_DEEP); /* View button */
-    text_draw(cx, cy - 80, 18, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, tr("{View button}: tap = {Select}, hold = menu"));
+    for (int pass = 0; pass < 2; ++pass) /* the outline first (a little bigger), then the body over it */
+    {
+        const uint32_t col = pass == 0 ? edge : body;
+        const float g = pass == 0 ? 6.0f : 0.0f;
+        draw_rrect(cx - 300 - g, cy - 120 - g, 600 + 2 * g, 260 + 2 * g, 100, col);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            draw_circle(cx + s * 250, cy + 140, 92 + g, col); /* the grip */
+        }
+    }
     for (int s = -1; s <= 1; s += 2)
     {
-        draw_circle(cx + s * 110, cy + 110, 46, TH_BG);
-        draw_circle(cx + s * 110, cy + 110, 34, edge);
+        draw_rrect(cx + s * 235 - 95, cy - 166, 190, 44, 20, edge); /* bumper */
+        draw_rrect(cx + s * 235 - 89, cy - 160, 178, 32, 16, body);
+        draw_rrect(cx + s * 235 - 65, cy - 236, 130, 58, 24, edge); /* trigger */
+        draw_rrect(cx + s * 235 - 59, cy - 230, 118, 46, 20, body);
     }
+    const float sticks[2][2] = {{-230, -30}, {110, 70}};
+    for (int k = 0; k < 2; ++k)
+    {
+        draw_circle(cx + sticks[k][0], cy + sticks[k][1], 54, TH_BG_DEEP);
+        draw_circle(cx + sticks[k][0], cy + sticks[k][1], 40, edge);
+    }
+    draw_rrect(cx - 110 - 78, cy + 66 - 26, 156, 52, 14, TH_BG_DEEP); /* d-pad */
+    draw_rrect(cx - 110 - 26, cy + 66 - 78, 52, 156, 14, TH_BG_DEEP);
+    draw_circle(cx, cy - 92, 24, edge); /* the Xbox button */
+    draw_circle(cx, cy - 92, 18, TH_BG_DEEP);
+    draw_pad_glyph(GLYPH_TOUCHPAD, cx - 62, cy - 52, 44); /* View: not remapped, it is the menu and Select */
+    text_draw(cx, cy + 200, 18, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, tr("{View button}: tap = {Select}, hold = menu"));
     for (int i = 0; i < PAD_COUNT; ++i)
     {
         float x = cx + PAD[i].x, y = cy + PAD[i].y;
