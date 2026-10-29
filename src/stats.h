@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - per-game records: play time, last played, favorite, achievements.
+ * SwanStation - per-game records: play time, last played, favorite, achievements.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_STATS_H

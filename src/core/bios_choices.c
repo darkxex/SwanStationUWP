@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the choices of the core's three BIOS options. See bios_choices.h.
+ * SwanStation - the choices of the core's three BIOS options. See bios_choices.h.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "bios_choices.h"

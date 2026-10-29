@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - game art downloaded on demand: bezels, title screens, gameplay.
+ * SwanStation - game art downloaded on demand: bezels, title screens, gameplay.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_ART_H

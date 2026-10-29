@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - logging and path helpers.
+ * SwanStation - logging and path helpers.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "SwanStationPS5.h"
@@ -39,7 +39,7 @@ void SwanStationPS5_log(const char *fmt, ...)
 
     size_t len = strlen(line);
     const char *nl = (len > 0 && line[len - 1] == '\n') ? "" : "\n";
-    fprintf(stderr, "[SwanStationPS5] %s%s", line, nl);
+    fprintf(stderr, "[SwanStation] %s%s", line, nl);
     if (log_file)
     {
         fprintf(log_file, "%s%s", line, nl);

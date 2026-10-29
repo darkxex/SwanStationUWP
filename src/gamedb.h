@@ -1,6 +1,6 @@
 /*
- * SwanStationPS5 - what DuckStation's game database knows about each disc (downloaded
- * once on the console, never part of SwanStationPS5).
+ * SwanStation - what DuckStation's game database knows about each disc (downloaded
+ * once on the console, never part of SwanStation).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_GAMEDB_H

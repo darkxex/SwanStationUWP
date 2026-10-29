@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - settings: tabs down the left, grouped rows, a help panel, and
+ * SwanStation - settings: tabs down the left, grouped rows, a help panel, and
  * per-game settings (L2 / R2 switch between this game and all games).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -104,7 +104,7 @@ static const char *row_name(const Row *r)
 static const char *row_help(const Row *r)
 {
     return r->special == SP_PROFILE && !ra_user()[0]
-               ? "Sign in to RetroAchievements with your user name and password, typed on the PS5."
+               ? "Sign in to RetroAchievements with your user name and password, typed on the Xbox."
                : r->help;
 }
 
@@ -189,7 +189,7 @@ static const Row DISPLAY[] = {
      "Adds frames AMD FSR 3 makes between the game's own, so motion looks smoother. x2: one between each two, so 30 fps shows at 60 and, with Video output at 120 Hz, 60 fps shows at 120. x4: three between each two, only with Video output at 120 Hz: a 30 fps game shows at 120. With Video output at 60 Hz it only doubles. Each extra frame adds a little input lag. It works at once. Video output is changed above and applies the next time the app starts.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(framegen), FRAMEGENS, 3, 0},
     {NULL, "Load HD textures",
-     "Loads HD texture packs. Over FTP, go to /data/SwanStationPS5/cache/ and create the folder textures if it doesn't exist, then create your game's folder inside it, for example \"SCUS-94900\" (Crash Bandicoot), and put the pack's PNG files there. Needs the GPU renderer. Takes effect with the next game.",
+     "Loads HD texture packs. Over FTP, go to LocalState/SwanStation/cache/ and create the folder textures if it doesn't exist, then create your game's folder inside it, for example \"SCUS-94900\" (Crash Bandicoot), and put the pack's PNG files there. Needs the GPU renderer. Takes effect with the next game.",
      K_TOGGLE, APPLY_NEXT_GAME, SP_HDTEX, false, NO_FIELD, OFF_ON, 2, 0},
     {"Screen fit", "Integer scaling", "Whole-number scale factors only: even pixels, black borders.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(integer_scale), OFF_ON, 2, 0},
@@ -236,15 +236,15 @@ static const Row CONTROLS[] = {
      false, INT_FIELD(vibration), VIBRATIONS, 5, 0},
     {NULL, "Light bar", "The controller's light: as the system sets it, blue/red/green/pink by player, the colour of the game's cover, or red in analog mode and off in digital.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(lightbar), LIGHTBARS, 4, 0},
-    {NULL, "Players", "Up to 4 with a multitap, for games that support it: each PS5 controller is a player.",
+    {NULL, "Players", "Up to 4 with a multitap, for games that support it: each Xbox controller is a player.",
      K_CHOICE, APPLY_NEXT_GAME, SP_NONE, false, BOOL_FIELD(multitap), PLAYERS, 2, 0},
-    {NULL, "Player order", "Choose which controller is player 1, 2, 3 and 4: press {Cross} on each in turn. Kept until SwanStationPS5 closes.",
+    {NULL, "Player order", "Choose which controller is player 1, 2, 3 and 4: press {Cross} on each in turn. Kept until SwanStation closes.",
      K_ACTION, APPLY_NOW, SP_PLAYERS, true, NO_FIELD, NULL, 0, 0},
     {"Sticks", "Dead zone", "Ignores small movements near the centre: raise it if a worn stick drifts on its own.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(stick_deadzone), DEADZONES, 5, 0},
     {NULL, "Stick response", "Precise: small moves stay small, for careful aiming. Quick: a little tilt goes far.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(stick_response), RESPONSES, 3, 0},
-    {"DualSense", "Rumble feel", "Classic as the game sends it; Soft is gentler; Punchy makes light hits easier to feel, and can shake the triggers too.",
+    {"Xbox controller", "Rumble feel", "Classic as the game sends it; Soft is gentler; Punchy makes light hits easier to feel, and can shake the triggers too.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(rumble_feel), RUMBLE_FEELS, 4, 0},
     {NULL, "Trigger effects", "The adaptive triggers. Automatic: {R2} firms up like a gas pedal in racing games (when the NeGcon or the {R2} / {L2} swap is on) and clicks with a light gun. The others give {L2} and {R2} that feel in every game.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(trigger_effects), TRIGGER_FEELS, 6, 0},
@@ -252,11 +252,11 @@ static const Row CONTROLS[] = {
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(racing_triggers), OFF_ON, 2, 0},
     {NULL, "NeGcon in compatible games", "Games that support Namco's NeGcon (racing games, Ace Combat...) use it: how far you press {R2} and {L2} counts, and the left stick steers.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(negcon), OFF_ON, 2, 0},
-    {NULL, "Touchpad as a mouse", "Games that support the PlayStation Mouse (Discworld, Lemmings...): slide a finger on the {Touchpad} to move the pointer; {R2} or {Cross} clicks, {L2} or {Circle} right-clicks.",
+    {NULL, "View button as a mouse", "Games that support the PlayStation Mouse (Discworld, Lemmings...): slide a finger on the {Touchpad} to move the pointer; {R2} or {Cross} clicks, {L2} or {Circle} right-clicks.",
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(touch_mouse), OFF_ON, 2, 0},
     {NULL, "Light gun", "GunCon and Justifier games: point the controller at the screen to aim (motion sensor), {R2} fires, {L2} reloads, {R3} re-centres. Automatic turns it on in every game that supports a light gun.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(lightgun), LIGHTGUNS, 3, 0},
-    {"Buttons", "Touchpad shortcuts", "Hold the {Touchpad} and press: {R2} fast forward, {L2} rewind (turn Rewind on in System), {Square} screenshot, {Triangle} start/pause the timer, {Circle} reset it.",
+    {"Buttons", "View button shortcuts", "Hold the {Touchpad} and press: {R2} fast forward, {L2} rewind (turn Rewind on in System), {Square} screenshot, {Triangle} start/pause the timer, {Circle} reset it.",
      K_INFO, APPLY_NOW, SP_HOTKEYS, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Button mapping", "Choose what each button of your controller presses.", K_ACTION,
      APPLY_NOW, SP_REMAP, false, NO_FIELD, NULL, 0, 0},
@@ -270,13 +270,13 @@ static const Row SOUND[] = {
 };
 
 static const Row ACHIEVEMENTS[] = {
-    {"Account", "Signed in as", "Use Sign in below with your user name and password. Only a token stays on the PS5.",
+    {"Account", "Signed in as", "Use Sign in below with your user name and password. Only a token stays on the Xbox.",
      K_INFO, APPLY_NOW, SP_ACCOUNT, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Your profile", "Your points, games mastered, what you unlocked lately and the games closest to mastery.",
      K_ACTION, APPLY_NOW, SP_PROFILE, true, NO_FIELD, NULL, 0, 0},
     {"While playing", "Unlock pop-ups", "The banner when you earn an achievement. Off only hides it: achievements still unlock.",
      K_TOGGLE, APPLY_NOW, SP_NONE, true, BOOL_FIELD(ra_popups), OFF_ON, 2, 0},
-    {NULL, "Pop-up style", "Banner: top right. Compact: a small line at the top. Big trophy: in the middle, like the PS5's.",
+    {NULL, "Pop-up style", "Banner: top right. Compact: a small line at the top. Big trophy: in the middle, like the Xbox's.",
      K_CHOICE, APPLY_NOW, SP_NONE, true, INT_FIELD(ra_popup_style), POPUP_STYLES, 3, 0},
     {NULL, "Progress tracker", "The small card when a counted achievement moves (18/80 dragons).", K_TOGGLE,
      APPLY_NOW, SP_NONE, true, BOOL_FIELD(ra_tracker), OFF_ON, 2, 0},
@@ -285,7 +285,7 @@ static const Row ACHIEVEMENTS[] = {
 };
 
 static const Row LIBRARY[] = {
-    {"Shelf", "Theme", "The look of SwanStationPS5: colours, fonts and the shelf's background.", K_CHOICE, APPLY_NOW, SP_THEME,
+    {"Shelf", "Theme", "The look of SwanStation: colours, fonts and the shelf's background.", K_CHOICE, APPLY_NOW, SP_THEME,
      true, INT_FIELD(theme), THEME_NAMES, THEME_COUNT, 0},
     /* the pre-rendered 3D box covers are no longer used: the covers are always flat
     {NULL, "Cover art", "Flat front covers, or 3D boxes.", K_CHOICE, APPLY_NOW, SP_NONE, true,
@@ -309,22 +309,22 @@ static const Row LIBRARY[] = {
      APPLY_NOW, SP_STATS, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Memory cards", "Every game's memory card: see the saves, export a card, import one.", K_ACTION,
      APPLY_NOW, SP_MEMCARDS, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Rescan library", "Looks for games added to /data/SwanStationPS5/games or a USB drive.", K_ACTION,
+    {NULL, "Rescan library", "Looks for games added to LocalState/SwanStation/games or a USB drive.", K_ACTION,
      APPLY_NOW, SP_RESCAN, true, NO_FIELD, NULL, 0, 0},
 };
 
 static const Row SYSTEM[] = {
-    {"SwanStationPS5", "Start BIOS", "Starts the console's BIOS with no disc, to manage memory cards. While Memory Card 1 Type (Restart) is set to Libretro, the saves will not show: that card belongs to each game, and with no game there is none.",
+    {"SwanStation", "Start BIOS", "Starts the console's BIOS with no disc, to manage memory cards. While Memory Card 1 Type (Restart) is set to Libretro, the saves will not show: that card belongs to each game, and with no game there is none.",
      K_ACTION, APPLY_NOW, SP_BIOS_START, true, NO_FIELD, NULL, 0, 0},
     {NULL, "Ask when a disc is put in", "A disc put in the USB CD drive opens its question by itself: play it from the disc or copy it, or start its game if it is installed already. Off: its game is only shown on the shelf, and the question comes when {Cross} is pressed on it.", K_TOGGLE,
      APPLY_NOW, SP_NONE, true, BOOL_FIELD(disc_ask), OFF_ON, 2, 0},
-    {NULL, "Install to external memory", "A disc is installed on the extended storage when it has at least 1 GB free, in its SwanStationPS5/games folder, instead of /data. Off: it is installed in /data.", K_TOGGLE,
+    {NULL, "Install to external memory", "A disc is installed on the extended storage when it has at least 1 GB free, in its SwanStation/games folder, instead of /data. Off: it is installed in /data.", K_TOGGLE,
      APPLY_NOW, SP_NONE, true, BOOL_FIELD(install_to_ext), OFF_ON, 2, 0},
     {NULL, "Games folder on drives", "A folder name to look for games in on drives. It is looked for on /mnt/ext0/, /mnt/ext1/ and /mnt/usb0/ to /mnt/usb7/ at once, as the number changes with the drives plugged in: psx searches /mnt/usb0/psx, /mnt/usb1/psx and so on. Leave it empty to turn it off.",
      K_ACTION, APPLY_NOW, SP_USBFOLDER, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "NFS shares", "Games on an NFS server of your network, as nfs:// addresses separated by ';'. Example: nfs://192.168.1.85/psx. The shelf lists them like a drive's; only SwanStationPS5 sees them. The server has to export the folder to the console. Rescan library connects the ones that did not.",
+    {NULL, "NFS shares", "Games on an NFS server of your network, as nfs:// addresses separated by ';'. Example: nfs://192.168.1.85/psx. The shelf lists them like a drive's; only SwanStation sees them. The server has to export the folder to the console. Rescan library connects the ones that did not.",
      K_ACTION, APPLY_NOW, SP_NFSHARES, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "NTFS disks", "Games on a USB disk formatted as NTFS, read straight from the disk and never copied. The shelf lists the Games folder on drives (and SwanStationPS5/games) of each disk; only SwanStationPS5 sees them. Rescan library looks for disks plugged in after the start. A disk Windows left in Fast Startup may not show its latest changes.", K_TOGGLE,
+    {NULL, "NTFS disks", "Games on a USB disk formatted as NTFS, read straight from the disk and never copied. The shelf lists the Games folder on drives (and SwanStation/games) of each disk; only SwanStation sees them. Rescan library looks for disks plugged in after the start. A disk Windows left in Fast Startup may not show its latest changes.", K_TOGGLE,
      APPLY_NOW, SP_NONE, true, BOOL_FIELD(ntfs_enabled), OFF_ON, 2, 0},
     {NULL, "NFS timeout", "How long a read from an NFS server may take before the connection is given up and the game is left. While it waits, the game stays paused and tries to reconnect. Raise it if the server or the network is slow.",
      K_CHOICE, APPLY_NOW, SP_NONE, true, INT_FIELD(nfs_timeout), NFS_TIMEOUTS, 5, 0},
@@ -342,26 +342,26 @@ static const Row SYSTEM[] = {
      K_TOGGLE, APPLY_NOW, SP_NONE, false, BOOL_FIELD(rewind), OFF_ON, 2, 0},
     {NULL, "Run-ahead", "Answers your buttons 1 to 10 frames sooner, for fighting games and platformers. It runs extra frames: at high internal resolutions some games may slow down. It is not used while Double frames is on.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(run_ahead), RUN_AHEADS, 11, 0},
-    {NULL, "Auto-save", "Saves the game by itself every few minutes into three auto-save slots (the oldest is replaced). Load one from the SwanStationPS5 menu > Auto-saves.",
+    {NULL, "Auto-save", "Saves the game by itself every few minutes into three auto-save slots (the oldest is replaced). Load one from the SwanStation menu > Auto-saves.",
      K_CHOICE, APPLY_NOW, SP_NONE, false, INT_FIELD(autosave), AUTOSAVES, 4, 0},
     {"People", "Who's playing", "Profiles: each person keeps their own memory cards, save states, settings, play time, favourites and RetroAchievements sign-in. Games and covers are shared.",
      K_ACTION, APPLY_NOW, SP_WHO, true, NO_FIELD, NULL, 0, 0},
     {"Phone", "Settings from your phone", "Change settings from a phone on the same network: scan the code.",
      K_TOGGLE, APPLY_NOW, SP_REMOTE, true, BOOL_FIELD(remote), OFF_ON, 2, 0},
-    {"Console", "Language", "The language of SwanStationPS5's menus.", K_CHOICE, APPLY_NOW, SP_LANGUAGE, true,
+    {"Console", "Language", "The language of SwanStation's menus.", K_CHOICE, APPLY_NOW, SP_LANGUAGE, true,
      INT_FIELD(language), NULL, LANG_COUNT, 0},
-    {NULL, "Unlock /data with etaHEN", "SwanStationPS5 asks etaHEN for access to your games. Turn off if closing SwanStationPS5 crashes the console.",
+    {NULL, "Unlock /data with etaHEN", "SwanStation asks etaHEN for access to your games. Turn off if closing SwanStation crashes the console.",
      K_TOGGLE, APPLY_NEXT_LAUNCH, SP_UNLOCK, true, NO_FIELD, OFF_ON, 2, 0},
-    {NULL, "Allow SwanStationPS5 in PS5SX2 Helper", "PS5SX2 Helper only unlocks the apps listed in /data/whitelist.txt. This adds SwanStationPS5; reload the helper (or restart the console) afterwards.",
+    {NULL, "Allow SwanStation in PS5SX2 Helper", "PS5SX2 Helper only unlocks the apps listed in /data/whitelist.txt. This adds SwanStation; reload the helper (or restart the console) afterwards.",
      K_ACTION, APPLY_NOW, SP_WHITELIST, true, NO_FIELD, NULL, 0, 0},
 };
 
 static const Row ABOUT[] = {
-    {"SwanStationPS5", "Version", "PlayStation X Super 5: PS1 emulation for jailbroken PS5, built on SwanStation.",
+    {"SwanStation", "Version", "PlayStation X Super 5: PS1 emulation for jailbroken Xbox, built on SwanStation.",
      K_INFO, APPLY_NOW, SP_VERSION, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "BIOS", "SwanStationPS5 never includes a BIOS: use a dump of your own console, or the built-in one.",
+    {NULL, "BIOS", "SwanStation never includes a BIOS: use a dump of your own console, or the built-in one.",
      K_INFO, APPLY_NOW, SP_BIOS, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Games", "Games are your own backups, in /data/SwanStationPS5/games.", K_INFO, APPLY_NOW, SP_GAMES,
+    {NULL, "Games", "Games are your own backups, in LocalState/SwanStation/games.", K_INFO, APPLY_NOW, SP_GAMES,
      true, NO_FIELD, NULL, 0, 0},
     {NULL, "Drives", "The extended storage and USB drives found, with their free space.", K_INFO, APPLY_NOW,
      SP_DRIVES, true, NO_FIELD, NULL, 0, 0},
@@ -369,9 +369,9 @@ static const Row ABOUT[] = {
      true, NO_FIELD, NULL, 0, 0},
     {NULL, "Created by", "The person behind SwanStationPS5.", K_INFO, APPLY_NOW, SP_CREDITS, true, NO_FIELD, NULL, 0,
      0},
-    {"Updates", "Check for updates", "Looks for a newer SwanStationPS5 on GitHub and installs it.", K_ACTION, APPLY_NOW,
+    {"Updates", "Check for updates", "Looks for a newer SwanStation on GitHub and installs it.", K_ACTION, APPLY_NOW,
      SP_UPDATE, true, NO_FIELD, NULL, 0, 0},
-    {NULL, "Check when SwanStationPS5 starts", "Tells you on the shelf when a new version is out.", K_TOGGLE, APPLY_NOW,
+    {NULL, "Check when SwanStation starts", "Tells you on the shelf when a new version is out.", K_TOGGLE, APPLY_NOW,
      SP_NONE, true, BOOL_FIELD(update_check), OFF_ON, 2, 0},
 };
 
@@ -564,7 +564,7 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
             break;
         }
     }
-    /* the three BIOS choices and the BIOS to start go above "Start BIOS", at the top of the SwanStationPS5 group */
+    /* the three BIOS choices and the BIOS to start go above "Start BIOS", at the top of the SwanStation group */
     if (base == SYSTEM)
     {
         for (int k = 0; k < n; ++k)
@@ -579,7 +579,7 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
                 if (!ss_opt_is_bios(i))
                     continue;
                 static const char *const bios_names[] = {"NTSC-J BIOS", "NTSC-U BIOS", "PAL BIOS"}; /* the table's order */
-                Row r = {placed == 0 ? "SwanStationPS5" : NULL,
+                Row r = {placed == 0 ? "SwanStation" : NULL,
                          bios_names[placed],
                          "Which BIOS the games of this region run: detect it automatically, the OpenBIOS built into the core, or a file of the BIOS folder. It applies when the next game starts.",
                          K_CHOICE,
@@ -595,7 +595,7 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
             }
             Row start = {NULL,
                          "BIOS to start",
-                         "The console whose BIOS Start BIOS boots: it runs the BIOS chosen above for that region. NTSC-U unless you change it here; it goes back to NTSC-U every time SwanStationPS5 opens.",
+                         "The console whose BIOS Start BIOS boots: it runs the BIOS chosen above for that region. NTSC-U unless you change it here; it goes back to NTSC-U every time SwanStation opens.",
                          K_CHOICE,
                          APPLY_NOW,
                          SP_NONE,
@@ -646,7 +646,7 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
         for (int i = 0; i < SS_OPT_COUNT; ++i)
         {
             if (SS_OPTS[i].category != categories[c] || n >= MAX_ROWS || is_aspect_option(i) || is_widescreen_option(i) ||
-                is_texture_filter_option(i) || is_sprite_filter_option(i) || is_db_only_option(i) || ss_opt_is_bios(i) || /* they go with Start BIOS, in SwanStationPS5 */
+                is_texture_filter_option(i) || is_sprite_filter_option(i) || is_db_only_option(i) || ss_opt_is_bios(i) || /* they go with Start BIOS, in SwanStation */
                 (base == DISPLAY && custom[0] >= 0 && is_custom_aspect_option(i)))
                 continue;
             if (base == CONTROLS && i == ac_opt())
@@ -697,6 +697,8 @@ static void add_swanstation_rows(Tab *tab, const Row *base, int base_count, cons
     tab->count = n;
 }
 
+static void drop_hidden_rows(void);
+
 static void ensure_rows(void)
 {
     if (ss_rows_built)
@@ -726,6 +728,65 @@ static void ensure_rows(void)
             static const int cats[] = {SSC_PORT};
             add_swanstation_rows(&TABS[t], base, count, cats, 1);
         }
+    }
+    drop_hidden_rows();
+}
+
+/* What an Xbox Series console has no use for: the Xbox controller's light bar, adaptive triggers and motion (light gun), the
+ * Xbox-only unlock and helper, network and NTFS shares, the phone's settings page, the disc drive, self-update and the
+ * frame generation (not in this build). */
+static bool row_hidden(const Row *r)
+{
+    switch (r->special)
+    {
+    case SP_UNLOCK:
+    case SP_WHITELIST:
+    case SP_NFSHARES:
+    case SP_REMOTE:
+    case SP_UPDATE:
+        return true;
+    default:
+        break;
+    }
+    static const int hidden_fields[] = {
+        (int)offsetof(Settings, lightbar),      (int)offsetof(Settings, trigger_effects), (int)offsetof(Settings, touch_mouse),
+        (int)offsetof(Settings, lightgun),      (int)offsetof(Settings, ntfs_enabled),    (int)offsetof(Settings, install_to_ext),
+        (int)offsetof(Settings, disc_ask),      (int)offsetof(Settings, nfs_timeout),     (int)offsetof(Settings, remote),
+        (int)offsetof(Settings, update_check),  (int)offsetof(Settings, framegen),
+    };
+    if (r->offset >= 0)
+        for (size_t i = 0; i < sizeof(hidden_fields) / sizeof(hidden_fields[0]); ++i)
+            if (r->offset == hidden_fields[i])
+                return true;
+    return false;
+}
+
+/* The tabs' rows without the hidden ones; a hidden row's card caption goes to the next row that stays. */
+static void drop_hidden_rows(void)
+{
+    for (int t = 0; t < TAB_COUNT; ++t)
+    {
+        Row *rows = malloc(sizeof(Row) * (size_t)TABS[t].count);
+        if (!rows)
+            continue;
+        int n = 0;
+        const char *pending_group = NULL;
+        for (int i = 0; i < TABS[t].count; ++i)
+        {
+            Row r = TABS[t].rows[i];
+            if (row_hidden(&r))
+            {
+                if (r.group && !pending_group)
+                    pending_group = r.group;
+                continue;
+            }
+            if (pending_group && !r.group)
+                r.group = pending_group;
+            pending_group = NULL;
+            rows[n++] = r;
+        }
+        TABS[t].rows = rows;
+        TABS[t].count = n;
     }
 }
 
@@ -1117,7 +1178,7 @@ static const char *value_label(const Row *r, char *buf, size_t size)
         case UPDATE_NONE: return tr("Up to date");
         case UPDATE_AVAILABLE: snprintf(buf, size, tr("%s available: install"), update_version()); return buf;
         case UPDATE_INSTALLING: return tr("Installing...");
-        case UPDATE_INSTALLED: return tr("Installed: restart SwanStationPS5");
+        case UPDATE_INSTALLED: return tr("Installed: restart SwanStation");
         case UPDATE_FAILED: return update_message();
         default: return SwanStationPS5_VERSION;
         }
@@ -1230,7 +1291,7 @@ static void apply_preset(int preset)
 
 static void draw_controller(float cx, float cy, int highlight)
 {
-    /* a DualSense, simplified: body, grips, touchpad, sticks */
+    /* a Xbox controller, simplified: body, grips, View button, sticks */
     const uint32_t body = TH_PILL, edge = theme.light ? TH_DIVIDER : 0xff2f3a80u;
     draw_rrect(cx - 360, cy - 130, 720, 250, 120, edge);
     draw_rrect(cx - 354, cy - 124, 708, 238, 116, body);
@@ -1239,7 +1300,7 @@ static void draw_controller(float cx, float cy, int highlight)
     draw_circle(cx - 250, cy + 140, 86, body);
     draw_circle(cx + 250, cy + 140, 86, body);
     draw_rrect(cx - 354, cy - 60, 708, 170, 60, body);
-    draw_rrect(cx - 110, cy - 118, 220, 110, 18, TH_BG_DEEP); /* touchpad */
+    draw_rrect(cx - 110, cy - 118, 220, 110, 18, TH_BG_DEEP); /* View button */
     text_draw(cx, cy - 80, 18, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, tr("{Touchpad}: tap = {Select}, hold = menu"));
     for (int s = -1; s <= 1; s += 2)
     {
@@ -1416,7 +1477,7 @@ static void players_page(uint32_t pressed)
 
 /* ---------------------------------------------------------------- the profiles page */
 
-/* The profiles, then a new one for each signed-in PS5 user who hasn't got
+/* The profiles, then a new one for each signed-in Xbox user who hasn't got
  * one, then a numbered player. */
 static int who_rows(char adds[][PROFILE_NAME_LEN], int *add_count)
 {
@@ -1692,7 +1753,7 @@ static void draw_help(const Row *r)
     const float w = 476, x = plat_width() - TH_MARGIN - w, top = 236;
     draw_rrect(x, top, w, 724, TH_RADIUS, TH_CARD);
     if (!r && tab()->rows == ABOUT)
-        r = &ABOUT[0]; /* nothing to select on About: describe SwanStationPS5 */
+        r = &ABOUT[0]; /* nothing to select on About: describe SwanStation */
     if (!r)
         return;
     icon_draw(tab()->icon, x + 32, top + 32, 40, TH_FOCUS);
@@ -1707,7 +1768,7 @@ static void draw_help(const Row *r)
     const float room = (r->global_only && S.game_scope && scope_game() ? top + 630 : top + 668) - y;
     y += draw_wrapped_fit(x + 32, y, w - 64, 24, TH_TEXT_SOFT, tr(row_help(r)), room) + 20;
     static const char *const notes[] = {"Applies right away", "From the next game you start",
-                                        "After SwanStationPS5 restarts"};
+                                        "After SwanStation restarts"};
     if (r->special == SP_REMOTE)
     {
         const char *url = remote_address();
@@ -1730,7 +1791,7 @@ static void draw_help(const Row *r)
         text_draw(x + w * 0.5f, qy + qs + 30, 22, FONT_BOLD, TH_TEXT, ALIGN_CENTER,
                   tr("Scan for the GitHub page"));
         text_draw(x + w * 0.5f, qy + qs + 60, 20, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                  "https://github.com/darkxex/SwanStationPS5");
+                  "https://github.com/darkxex/SwanStation");
         text_draw(x + w * 0.5f, qy + qs + 88, 20, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, "https://x.com/AngelXex1");
     }
     if (r->kind != K_INFO && r->kind != K_ACTION)
@@ -2083,7 +2144,7 @@ static void activate(const Row *r)
         fclose(f);
         if (present)
         {
-            app_toast("SwanStationPS5 is already in the whitelist");
+            app_toast("SwanStation is already in the whitelist");
             return;
         }
         f = fopen(list, "a");

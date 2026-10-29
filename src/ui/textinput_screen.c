@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - a text field typed with an on-screen keyboard drawn by the app (the system keyboard
+ * SwanStation - a text field typed with an on-screen keyboard drawn by the app (the system keyboard
  * module stops the title from launching, see platform/ps5_shims.c). Used by settings that take a name,
  * such as the games folder on USB drives. The keys are those of the sign-in screen's keyboard; the last
  * row is Space and Apply, and Apply hands the text back.

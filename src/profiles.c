@@ -1,12 +1,12 @@
 /*
- * SwanStationPS5 - profiles: several people on one console, each with their own
+ * SwanStation - profiles: several people on one console, each with their own
  * memory cards, save states, settings, play time and favourites, and
  * RetroAchievements sign-in. Games, BIOS, covers and cheats are shared.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The main profile is the data root itself (where everything lived before
  * profiles), so nothing moves. Others live in <root>/profiles/<name>/.
- * <root>/profiles.txt lists them (a sandboxed SwanStationPS5 can't list folders) and
+ * <root>/profiles.txt lists them (a sandboxed SwanStation can't list folders) and
  * <root>/profile.txt says whose turn it is.
  */
 #include "profiles.h"
@@ -65,7 +65,7 @@ static void save_list(void)
     FILE *f = fopen(path, "w");
     if (!f)
         return;
-    fprintf(f, "# SwanStationPS5 profiles (each has a folder in profiles/)\n");
+    fprintf(f, "# SwanStation profiles (each has a folder in profiles/)\n");
     for (int i = 1; i < count; ++i)
         fprintf(f, "%s\n", names[i]);
     fclose(f);

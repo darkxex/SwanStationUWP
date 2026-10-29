@@ -1,9 +1,9 @@
 /*
- * SwanStationPS5 - PlayStation X Super 5
+ * SwanStation - PlayStation X Super 5
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Shared types for the frontend. Everything here is plain C11 so the same
- * sources build for the PS5 (no full libc++) and for the desktop test build.
+ * sources build for the Xbox (no full libc++) and for the desktop test build.
  */
 #ifndef SwanStationPS5_H
 #define SwanStationPS5_H
@@ -14,8 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define SwanStationPS5_NAME "SwanStationPS5"           /* identifiers: the User-Agent of network requests, the Vulkan application name */
-#define SwanStationPS5_TITLE "SwanStationPS5" /* what is shown on screen */
+#define SwanStationPS5_NAME "SwanStationXbox"           /* identifiers: the User-Agent of network requests, the Vulkan application name */
+#define SwanStationPS5_TITLE "SwanStation Xbox" /* what is shown on screen */
 #define SwanStationPS5_TITLE_ID "PPSA98510"
 #define SwanStationPS5_VERSION "1.6.0"
 #define SwanStationPS5_PATH_MAX 512
@@ -40,7 +40,7 @@ enum
     BTN_R2 = 13,
     BTN_L3 = 14,
     BTN_R3 = 15,
-    BTN_MENU = 16, /* touchpad click: opens the SwanStationPS5 in-game menu */
+    BTN_MENU = 16, /* View button click: opens the SwanStation in-game menu */
 };
 #define BIT(b) (1u << (b))
 #define SwanStationPS5_MAX_PADS 4 /* 3 and 4 play through a multitap */
@@ -53,10 +53,10 @@ typedef struct
     uint8_t l2, r2;    /* how far the triggers are pressed, 0..255 */
     bool motion;       /* quat holds the controller's orientation */
     float quat[4];     /* x, y, z, w */
-    /* the light gun (filled in by SwanStationPS5): -32767..32767 across the picture */
+    /* the light gun (filled in by SwanStation): -32767..32767 across the picture */
     int16_t gun_x, gun_y;
     bool gun_offscreen;
-    /* the touchpad (one finger) and, for mouse games, the pointer's move this frame */
+    /* the View button (one finger) and, for mouse games, the pointer's move this frame */
     bool touching;
     uint16_t touch_x, touch_y; /* 0..1919, 0..1079 */
     int16_t mouse_dx, mouse_dy;
@@ -99,7 +99,7 @@ typedef struct
     int ui_sound;     /* SFX_STYLE_* in ui/sfx.h; SFX_STYLE_OFF mutes */
     int ui_volume;    /* 0..3 = 25/50/75/100 % */
     int stick_dpad;   /* enum StickDpad */
-    int menu_combo;   /* how the game menu opens: 0 touchpad + L1 + R1 held, 1 L3 + R3 held, 2 Options + touchpad held */
+    int menu_combo;   /* how the game menu opens: 0 View button + L1 + R1 held, 1 L3 + R3 held, 2 Options + View button held */
     int menu_hold;    /* how long that combination is held: 0 immediate, 1 0.5 s, 2 1 s */
     int language;     /* enum Lang in i18n.h */
     int vibration;        /* controller vibration: 0 off, 1..4 = 25/50/75/100 % */
@@ -116,7 +116,7 @@ typedef struct
     int crt;              /* scanlines: 0 off, 1 light, 2 strong */
     int border;           /* around the picture: 0 black, 1 glow, 2 TV frame */
     bool remote;          /* settings page for phones on the local network */
-    bool update_check;    /* look for new SwanStationPS5 releases at start */
+    bool update_check;    /* look for new SwanStation releases at start */
     bool pgxp;            /* precise geometry, no wobbling polygons */
     int shader;           /* 0 off, 1 LCD3x, 2 CRT Royale Fast, 3 and 4 retired, 5 to 8 NTSC, 9 to 12 CRT Lottes, CRT Pi, 11 retired, zfast LCD, 13 to 16 CRT Royale, Newpixie, Hyllian NTSC, Mattias */
     bool hd_textures;     /* use a texture pack beside the game when there is one */
@@ -132,7 +132,7 @@ typedef struct
     int lightbar;         /* 0 left to the system, 1 player colours, 2 the game's cover colour, 3 red in analog mode / off in digital */
     int stick_deadzone;   /* 0 off, 1..4: 5, 10, 15, 20 % of the stick's travel ignored */
     int stick_response;   /* 0 normal, 1 precise (slow near the centre), 2 quick */
-    int trigger_effects;  /* DualSense triggers: 0 off, 1 automatic (pedal / gun click), then one feel for every game: click, light click, firm, buzz */
+    int trigger_effects;  /* Xbox controller triggers: 0 off, 1 automatic (pedal / gun click), then one feel for every game: click, light click, firm, buzz */
     bool racing_triggers; /* R2 and Cross swap places, and L2 and Square (off by default) */
     int rumble_feel;      /* 0 classic, 1 soft, 2 punchy, 3 punchy and in the triggers */
     int lightgun;         /* 0 automatic (known gun games), 1 off, 2 on */
@@ -160,7 +160,7 @@ typedef struct
     bool case_lighting;   /* the cover in the jewel case gets light: its shading and the glare over the lid; off: the picture as it is */
     bool jewel_cases;     /* the shelf shows 3D jewel cases; off: the flat covers with a reflection, as in 1.1.8 */
     bool negcon;          /* racing games that take a NeGcon: analog gas and brake on R2 / L2 */
-    bool touch_mouse;     /* mouse games: the touchpad moves the pointer */
+    bool touch_mouse;     /* mouse games: the View button moves the pointer */
     int run_ahead;        /* 0 off, 1 to 10 frames less input lag */
     bool fast_effects;    /* screen effects on the GPU, without the software copy */
     bool fsr;             /* FSR 1 scales the picture before the shader */
@@ -185,12 +185,12 @@ enum StickDpad
 
 enum CoverStyle
 {
-    COVER_FLAT = 0, /* front art, shown in perspective by SwanStationPS5 */
+    COVER_FLAT = 0, /* front art, shown in perspective by SwanStation */
     /* COVER_BOX3D,    pre-rendered 3D jewel case (no longer used) */
     COVER_STYLE_COUNT
 };
 
-/* Data layout below the SwanStationPS5 root (default /data/SwanStationPS5 on PS5). */
+/* Data layout below the SwanStation root (default LocalState/SwanStation on Xbox). */
 typedef struct
 {
     char root[SwanStationPS5_PATH_MAX];
@@ -218,7 +218,7 @@ bool make_dirs(const char *path);
 bool file_copy(const char *from, const char *to); /* replaces `to` */
 const char *path_ext(const char *path);  /* lower-case-insensitive extension without dot, "" if none */
 int str_icmp(const char *a, const char *b);
-/* localtime into *out (the PS5 libc has no localtime_r); false on failure */
+/* localtime into *out (the Xbox libc has no localtime_r); false on failure */
 struct tm;
 bool local_time(long long when, struct tm *out);
 

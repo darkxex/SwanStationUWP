@@ -4,3 +4,6 @@
 [submodule "third_party/swanstation"]
 	path = third_party/swanstation
 	url = https://github.com/libretro/swanstation.git
+[submodule "third_party/vulkan-headers"]
+	path = third_party/vulkan-headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git

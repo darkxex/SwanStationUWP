@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the interface's colours, sizes and timings, and its themes.
+ * SwanStation - the interface's colours, sizes and timings, and its themes.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The TH_* colours come from the active theme (theme.c), so a theme change

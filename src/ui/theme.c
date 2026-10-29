@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the themes: Classic, Neon Arcade, Memory Card (light and dark), Record Shelf and
+ * SwanStation - the themes: Classic, Neon Arcade, Memory Card (light and dark), Record Shelf and
  * Grayrat. Settings > Library > Theme.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

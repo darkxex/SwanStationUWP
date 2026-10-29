@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the in-game menu (a side panel over the paused game) and cheats.
+ * SwanStation - the in-game menu (a side panel over the paused game) and cheats.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "../app.h"

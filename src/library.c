@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - game library scanning.
+ * SwanStation - game library scanning.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "library.h"
@@ -99,7 +99,7 @@ static void clean_title(const char *raw, char *out, size_t size)
             }
         }
         if (*p == '(' && (strncmp(p, "(Disc", 5) == 0 || strncmp(p, "(disc", 5) == 0 ||
-                          strncmp(p, "(CD", 3) == 0 || strncmp(p, "(SwanStationPS5)", 7) == 0))
+                          strncmp(p, "(CD", 3) == 0 || strncmp(p, "(SwanStation)", 7) == 0))
         {
             const char *end = strchr(p, ')');
             if (end)
@@ -533,7 +533,7 @@ static void scan_root(Library *lib, const char *root)
                     skip[listed[k]] = true;
             else
             {
-                skip[i] = true; /* not usable here: SwanStationPS5 groups the discs itself */
+                skip[i] = true; /* not usable here: SwanStation groups the discs itself */
                 SwanStationPS5_log("library: %s lists discs that aren't beside it, ignored", m3u);
             }
         }
@@ -574,7 +574,7 @@ static void scan_root(Library *lib, const char *root)
         if (path_exists(m3u))
         {
             /* that name is taken by a playlist that didn't work here: keep it */
-            snprintf(m3u_name, sizeof(m3u_name), "%.180s (SwanStationPS5).m3u", title);
+            snprintf(m3u_name, sizeof(m3u_name), "%.180s (SwanStation).m3u", title);
             path_join(m3u, sizeof(m3u), root, m3u_name);
         }
         char first[SwanStationPS5_PATH_MAX];
@@ -815,7 +815,7 @@ int library_delete_game_files(const Game *g)
             SwanStationPS5_log("library: deleted %s", list.path[i]);
             ++removed;
         }
-    /* a folder SwanStationPS5 made for an imported disc ("Title [serial]"): gone with its files, if empty */
+    /* a folder SwanStation made for an imported disc ("Title [serial]"): gone with its files, if empty */
     size_t n = strlen(g->folder);
     if (removed && n > 2 && g->folder[n - 1] == ']')
         rmdir(g->folder);

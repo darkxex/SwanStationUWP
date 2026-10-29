@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - game art downloaded on demand: bezels (The Bezel Project), title
+ * SwanStation - game art downloaded on demand: bezels (The Bezel Project), title
  * screens and gameplay pictures (libretro-thumbnails).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *

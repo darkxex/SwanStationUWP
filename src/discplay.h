@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - a disc played from the drive: its sectors are read into memory in the background and the core
+ * SwanStation - a disc played from the drive: its sectors are read into memory in the background and the core
  * sees them as /discplay/<name>.cue and /discplay/<name>.bin (served by src/nfs/nfs.cpp). See discimport.h for the
  * side of the screens.
  * SPDX-License-Identifier: GPL-3.0-or-later

@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 v2 - the screen through Vulkan (RADV, VK_KHR_display on VideoOut).
+ * SwanStation v2 - the screen through Vulkan (RADV, VK_KHR_display on VideoOut).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_VK_PRESENT_H

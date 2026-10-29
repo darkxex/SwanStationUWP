@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - settings persistence.
+ * SwanStation - settings persistence.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_CONFIG_H

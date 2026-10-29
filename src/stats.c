@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - per-game records: play time, last played, favorite, achievements.
+ * SwanStation - per-game records: play time, last played, favorite, achievements.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * stats.txt: id<TAB>seconds<TAB>last played (unix)<TAB>favorite<TAB>unlocked<TAB>total
@@ -87,7 +87,7 @@ void stats_save(void)
     FILE *f = fopen(temp, "w");
     if (!f)
         return;
-    fprintf(f, "# SwanStationPS5 play records: id, seconds played, last played, favorite, achievements\n");
+    fprintf(f, "# SwanStation play records: id, seconds played, last played, favorite, achievements\n");
     for (int i = 0; i < count; ++i)
     {
         const GameStats *g = &records[i];

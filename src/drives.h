@@ -1,44 +1,36 @@
+/*
+ * SwanStation Xbox - the drives a games folder is looked for on. On the console the USB drives and the extended storage
+ * show up as drive letters; a UWP app sees one only if the user gave it access, so a letter that is not there is simply
+ * left out. Games are looked for in <letter>:/<Games folder>, as "psx" by default.
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 #ifndef SwanStationPS5_DRIVES_H
 #define SwanStationPS5_DRIVES_H
-
-#define DRIVE_EXT_COUNT 2
-#define DRIVE_USB_COUNT 8
-#define DRIVE_COUNT (DRIVE_EXT_COUNT + DRIVE_USB_COUNT)
-
-static const char *const drive_paths[DRIVE_COUNT] = {"/mnt/ext0", "/mnt/ext1", "/mnt/usb0", "/mnt/usb1", "/mnt/usb2",
-                                                     "/mnt/usb3", "/mnt/usb4", "/mnt/usb5", "/mnt/usb6", "/mnt/usb7"};
-
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#ifdef __linux__
-#include <sys/vfs.h>
-#else
-#include <sys/mount.h>
-extern int drives_fstatfs(int, struct statfs *) __asm__("_fstatfs");
-#endif
+#include <windows.h>
+
+#define DRIVE_EXT_COUNT 0 /* nothing here is storage the app may install to without asking */
+#define DRIVE_USB_COUNT 8
+#define DRIVE_COUNT (DRIVE_EXT_COUNT + DRIVE_USB_COUNT)
+#define DRIVE_PREFIX_LEN 0 /* characters of a path that are not its name */
+
+static const char *const drive_paths[DRIVE_COUNT] = {"D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:"};
 
 static inline long long drive_free_mb(const char *path)
 {
-    struct stat st;
-    if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
+    wchar_t root[8];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, root, 6) <= 0)
         return -1;
-    struct statfs fs;
-    memset(&fs, 0, sizeof(fs));
-    int fd = open(path, O_RDONLY | O_DIRECTORY);
-    if (fd < 0)
+    wcscat(root, L"\\");
+    ULARGE_INTEGER avail, total, total_free;
+    if (!GetDiskFreeSpaceExW(root, &avail, &total, &total_free))
         return -1;
-#ifdef __linux__
-    int measured = fstatfs(fd, &fs);
-#else
-    int measured = drives_fstatfs(fd, &fs);
-#endif
-    close(fd);
-    return measured == 0 ? (long long)((unsigned long long)fs.f_bavail * fs.f_bsize >> 20) : -1;
+    return (long long)(avail.QuadPart >> 20);
 }
 
 static inline bool drive_usable(int d)
@@ -59,7 +51,7 @@ static inline int drives_list(char *buf, size_t size, int only)
         long long free_mb = drive_free_mb(drive_paths[d]);
         if (only >= 0 && found++ != only)
             continue;
-        const char *name = drive_paths[d] + 5;
+        const char *name = drive_paths[d] + DRIVE_PREFIX_LEN;
         int n = snprintf(buf + len, size - len, "%s%s %lld.%lld GB", only < 0 && len ? ", " : "", name, free_mb >> 10,
                          (free_mb & 1023) * 10 >> 10);
         if (n < 0 || (size_t)n >= size - len)
@@ -72,18 +64,10 @@ static inline int drives_list(char *buf, size_t size, int only)
     return found;
 }
 
+/* Installing a disc to extended storage: there is none here, discs are not read (no disc drive in a UWP app) */
 static inline bool drives_ext_games(char *out, size_t size)
 {
-    for (int d = 0; d < DRIVE_EXT_COUNT; ++d)
-        if (drive_free_mb(drive_paths[d]) >= 1024)
-        {
-            char base[64];
-            snprintf(base, sizeof(base), "%s/SwanStationPS5", drive_paths[d]);
-            snprintf(out, size, "%s/games", base);
-            mkdir(base, 0777);
-            mkdir(out, 0777);
-            return true;
-        }
+    (void)out, (void)size;
     return false;
 }
 

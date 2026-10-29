@@ -1,8 +1,8 @@
 /*
- * SwanStationPS5 - what SwanStationPS5 does with the controller while a game runs.
+ * SwanStation - what SwanStation does with the controller while a game runs.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * The light gun: the DualSense's orientation (from its motion sensor) is
+ * The light gun: the Xbox controller's orientation (from its motion sensor) is
  * turned into a point on the picture, relative to where the controller was
  * pointing when the game started (R3 re-centres). Without the sensor, the
  * right stick moves the crosshair.
@@ -183,7 +183,7 @@ static struct
     int gun;           /* 0 none, 1 GunCon, 2 Justifier: player 1 holds it */
     bool racing;       /* Cross is the gas and Square the brake: they can go on R2 / L2 */
     bool pedal;        /* a racing game: R2 feels like a pedal */
-    int special;       /* 1 NeGcon (analog gas and brake), 2 a mouse on the touchpad */
+    int special;       /* 1 NeGcon (analog gas and brake), 2 a mouse on the View button */
     bool was_touching;
     uint16_t last_x, last_y;
     bool centred;      /* centre holds the orientation that aims at the middle */
@@ -403,7 +403,7 @@ void controls_apply(PadState pads[SwanStationPS5_MAX_PADS], const Settings *s, f
             update_gun(p, dt);
         if (C.special == 2 && i == 0)
         {
-            /* the touchpad moves the pointer by how far the finger slid; the
+            /* the View button moves the pointer by how far the finger slid; the
              * right stick works too */
             float dx = 0, dy = 0;
             if (p->touching && C.was_touching)

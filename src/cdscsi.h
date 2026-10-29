@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - SCSI pass-through to a CD drive (the USB CD drive of the PS5), shared by the drive probe and
+ * SwanStation - SCSI pass-through to a CD drive (the USB CD drive of the Xbox), shared by the drive probe and
  * the disc import. On other platforms every call fails.
  * The CAM calls follow ps-disc-detect (Al-Azif, GPL-3.0) and PS5SX2 (GPL-3.0).
  * SPDX-License-Identifier: GPL-3.0-or-later

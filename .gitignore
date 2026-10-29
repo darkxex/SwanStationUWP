@@ -16,14 +16,17 @@ dist/
 *.user
 *.suo
 *.log
-*.elf
-*.self
-*.sprx
-*.prx
-*.pkg
 
-# SwanStationPS5
+# SwanStation Xbox: fetched or built by tools/*.ps1, never committed
 .ref/
+xbox/Mesa/
+xbox/Core/
+xbox/packages/
+xbox/*.pfx
+xbox/*.cer
+*.appx
+*.msix
+*.appxsym
 
 # Claude Code notes (local only)
 CLAUDE.md

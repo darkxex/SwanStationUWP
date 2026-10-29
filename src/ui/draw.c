@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - shape helpers built on plat_draw_mesh.
+ * SwanStation - shape helpers built on plat_draw_mesh.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "draw.h"
@@ -294,14 +294,15 @@ static const char *glyph_label(enum PadGlyph g)
 {
     switch (g)
     {
-    case GLYPH_L1: return "L1";
-    case GLYPH_R1: return "R1";
-    case GLYPH_L2: return "L2";
-    case GLYPH_R2: return "R2";
-    case GLYPH_L3: return "L3";
-    case GLYPH_R3: return "R3";
-    case GLYPH_START: return "OPTIONS";
-    case GLYPH_SELECT: return "SELECT";
+    case GLYPH_L1: return "LB";
+    case GLYPH_R1: return "RB";
+    case GLYPH_L2: return "LT";
+    case GLYPH_R2: return "RT";
+    case GLYPH_L3: return "LS";
+    case GLYPH_R3: return "RS";
+    case GLYPH_START: return "MENU";
+    case GLYPH_SELECT: return "VIEW";
+    case GLYPH_TOUCHPAD: return "VIEW"; /* the View button plays the part the Xbox controller's View button had */
     case GLYPH_PS1_START: return "START";
     default: return NULL;
     }
@@ -312,8 +313,6 @@ float pad_glyph_width(enum PadGlyph glyph, float size)
     const char *label = glyph_label(glyph);
     if (label)
         return text_width(size * 0.6f, FONT_BOLD, label) + size * 0.7f;
-    if (glyph == GLYPH_TOUCHPAD)
-        return size * 1.8f;
     return size;
 }
 
@@ -339,27 +338,28 @@ float draw_pad_glyph(enum PadGlyph glyph, float cx, float cy, float size)
                   label);
         return w;
     }
+    /* Xbox face buttons: the bottom one confirms (A), the right one goes back (B), as the PlayStation's Cross and
+     * Circle did; the enum keeps the old names. */
+    static const struct
+    {
+        enum PadGlyph glyph;
+        const char *letter;
+        uint32_t colour;
+    } FACE[] = {{GLYPH_CROSS, "A", 0xff6dc72eu},
+                {GLYPH_CIRCLE, "B", 0xffe0483eu},
+                {GLYPH_SQUARE, "X", 0xff3b8eeau},
+                {GLYPH_TRIANGLE, "Y", 0xfff2c230u}};
+    for (size_t i = 0; i < sizeof(FACE) / sizeof(FACE[0]); ++i)
+        if (FACE[i].glyph == glyph)
+        {
+            float d = size * 0.92f;
+            draw_rrect_outline(cx - d * 0.5f, cy - d * 0.5f, d, d, d * 0.5f, size * 0.09f, argb_alpha(FACE[i].colour, glyph_alpha));
+            text_draw(cx, cy - size * 0.62f * 0.62f, size * 0.62f, FONT_BOLD, argb_alpha(FACE[i].colour, glyph_alpha),
+                      ALIGN_CENTER, FACE[i].letter);
+            return w;
+        }
     switch (glyph)
     {
-    case GLYPH_CROSS:
-        draw_line(cx - r, cy - r, cx + r, cy + r, t, argb_alpha(0xff9fc0ffu, glyph_alpha));
-        draw_line(cx + r, cy - r, cx - r, cy + r, t, argb_alpha(0xff9fc0ffu, glyph_alpha));
-        break;
-    case GLYPH_CIRCLE:
-        draw_rrect_outline(cx - r - t * 0.5f, cy - r - t * 0.5f, 2 * r + t, 2 * r + t, r + t * 0.5f,
-                           t, argb_alpha(0xffff8f8fu, glyph_alpha));
-        break;
-    case GLYPH_SQUARE:
-        draw_rrect_outline(cx - r, cy - r, 2 * r, 2 * r, t, t, argb_alpha(0xfff3a0d0u, glyph_alpha));
-        break;
-    case GLYPH_TRIANGLE:
-    {
-        float top = cy - r * 1.05f, bottom = cy + r * 0.75f;
-        draw_line(cx, top, cx + r, bottom, t, argb_alpha(0xff5fd3a8u, glyph_alpha));
-        draw_line(cx + r, bottom, cx - r, bottom, t, argb_alpha(0xff5fd3a8u, glyph_alpha));
-        draw_line(cx - r, bottom, cx, top, t, argb_alpha(0xff5fd3a8u, glyph_alpha));
-        break;
-    }
     case GLYPH_UP:
     case GLYPH_DOWN:
     case GLYPH_LEFT:
@@ -370,13 +370,6 @@ float draw_pad_glyph(enum PadGlyph glyph, float cx, float cy, float size)
         float h = size * 0.92f;
         draw_rrect(cx - h * 0.5f, cy - h * 0.5f, h, h, h * 0.22f, argb_alpha(TH_ROW_SELECTED, glyph_alpha));
         icon_draw(icons[glyph - GLYPH_UP], cx - h * 0.4f, cy - h * 0.4f, h * 0.8f, argb_alpha(TH_TEXT, glyph_alpha));
-        break;
-    }
-    case GLYPH_TOUCHPAD:
-    {
-        float h = size * 0.8f;
-        draw_rrect_outline(cx - w * 0.5f, cy - h * 0.5f, w, h, h * 0.25f, size * 0.08f,
-                           argb_alpha(TH_TEXT_SOFT, glyph_alpha));
         break;
     }
     case GLYPH_NONE:

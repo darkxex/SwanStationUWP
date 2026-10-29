@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the game shelf (home screen).
+ * SwanStation - the game shelf (home screen).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_COVERFLOW_H

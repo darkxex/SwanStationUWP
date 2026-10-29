@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the game's own artwork around a 4:3 picture (The Bezel Project).
+ * SwanStation - the game's own artwork around a 4:3 picture (The Bezel Project).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_BEZELS_H

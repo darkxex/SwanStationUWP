@@ -1,8 +1,8 @@
 /*
- * SwanStationPS5 - single compilation unit for the stb libraries (public domain / MIT).
+ * SwanStation - single compilation unit for the stb libraries (public domain / MIT).
  *
- * No thread-locals (the PS5 build would need emulated TLS for stbi's error
- * string) and no assert() (the PS5 libc has no __assert).
+ * No thread-locals (the Xbox build would need emulated TLS for stbi's error
+ * string) and no assert() (the Xbox libc has no __assert).
  */
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_JPEG

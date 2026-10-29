@@ -1,4 +1,4 @@
-/* SwanStationPS5 - frame generation (AMD FSR 3's frame interpolation, from PS5SX2: third_party/framegen),
+/* SwanStation - frame generation (AMD FSR 3's frame interpolation, from PS5SX2: third_party/framegen),
  * for the presenter in C. From two of the game's frames, the one halfway between them.
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #pragma once

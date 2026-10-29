@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - a PS1 jewel case in 3D.
+ * SwanStation - a PS1 jewel case in 3D.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Four meshes of assets/psx_case_NTSC.obj, drawn back to front with their own UV: ntsc_case_back and ntsc_case_inner

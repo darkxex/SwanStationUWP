@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - a PS1 jewel case in 3D (assets/psx_case_NTSC.obj), drawn with plat_draw_mesh.
+ * SwanStation - a PS1 jewel case in 3D (assets/psx_case_NTSC.obj), drawn with plat_draw_mesh.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_CASE3D_H

@@ -1,20 +1,14 @@
 /*
- * SwanStationPS5 v2 - the screen through Vulkan (RADV, VK_KHR_display on VideoOut).
+ * SwanStation Xbox - the screen through Vulkan (Mesa's Dozen: Vulkan on Direct3D 12, in a UWP package).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * RADV's PS5 window system presents through VK_KHR_display: a display plane
- * surface on the TV, a FIFO swapchain flipped at vblank. Its images may only
- * be colour attachments, so the frame is drawn with a small pipeline that
- * samples textures (shaders/quad.*): first the game picture (once a core
- * renders through Vulkan), then the interface canvas, blended on top.
+ * Dozen presents to the CoreWindow of the thread that creates the swap chain (a FIFO chain, flipped at the TV's
+ * refresh). The frame is drawn with a small pipeline that samples textures (shaders/quad.*): first the game picture
+ * (once a core renders through Vulkan), then the interface, drawn by the GPU (vk_ui.inc) and blended on top.
  *
- * The canvas is still drawn by the CPU (SDL's software renderer); each frame
- * it is copied into a mapped staging buffer and then into a sampled image.
- *
- * A core that renders through Vulkan (SwanStation) creates the VkDevice
- * itself, through libretro's context negotiation: the presenter then moves
- * onto that device (vkp_adopt_device) and draws the core's image under the
- * canvas, which leaves a transparent hole where the game shows.
+ * A core that renders through Vulkan (SwanStation) creates the VkDevice itself, through libretro's context
+ * negotiation: the presenter then moves onto that device (vkp_adopt_device) and draws the core's image under the
+ * interface, which leaves a transparent hole where the game shows.
  */
 #include "vk_present.h"
 #include "vk_present_hw.h"
@@ -34,9 +28,14 @@
 #include <stdlib.h>
 #include <string.h>
 #define VK_NO_PROTOTYPES /* every command is a pointer looked up below */
+#ifndef VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+#include <windows.h>
 #include <vulkan/vulkan.h>
+#include "../uwp/uwp_app.h"
 
-/* defined in vk_probe.c, forwarding to RADV's ICD entry point */
+/* defined in vk_loader.c: Dozen's ICD entry point, loaded from the package */
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *name);
 
 #define FRAMES 2 /* frames in flight */
@@ -49,10 +48,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instan
 #define VK_INSTANCE_FUNCS(X)                                                                       \
     X(vkDestroyInstance) X(vkEnumeratePhysicalDevices) X(vkGetPhysicalDeviceProperties)          \
     X(vkGetPhysicalDeviceQueueFamilyProperties) X(vkGetPhysicalDeviceMemoryProperties)           \
-    X(vkCreateDevice) X(vkGetDeviceProcAddr) X(vkGetPhysicalDeviceDisplayPropertiesKHR)          \
-    X(vkGetDisplayModePropertiesKHR) X(vkGetPhysicalDeviceDisplayPlanePropertiesKHR)             \
-    X(vkGetDisplayPlaneSupportedDisplaysKHR) X(vkGetDisplayPlaneCapabilitiesKHR)                 \
-    X(vkCreateDisplayPlaneSurfaceKHR) X(vkDestroySurfaceKHR)                                       \
+    X(vkCreateDevice) X(vkGetDeviceProcAddr) X(vkCreateWin32SurfaceKHR) X(vkDestroySurfaceKHR)   \
     X(vkGetPhysicalDeviceSurfaceSupportKHR) X(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)         \
     X(vkGetPhysicalDeviceSurfaceFormatsKHR)
 
@@ -235,7 +231,7 @@ static bool create_instance(char *error, size_t size)
         snprintf(error, size, "the Vulkan driver is missing");
         return false;
     }
-    const char *extensions[] = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_DISPLAY_EXTENSION_NAME};
+    const char *extensions[] = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
     VkApplicationInfo app = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app.pApplicationName = SwanStationPS5_NAME;
     app.pEngineName = SwanStationPS5_NAME;
@@ -260,131 +256,37 @@ static bool create_instance(char *error, size_t size)
         snprintf(error, size, "no GPU");
         return false;
     }
+    /* what Dozen gives, for the log: the first thing to read when something does not draw */
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(V.gpu, &props);
+    SwanStationPS5_log("vulkan: %s, Vulkan %u.%u.%u, driver %u, vendor 0x%04x", props.deviceName,
+                       VK_API_VERSION_MAJOR(props.apiVersion), VK_API_VERSION_MINOR(props.apiVersion),
+                       VK_API_VERSION_PATCH(props.apiVersion), props.driverVersion, props.vendorID);
     return true;
 }
 
-/* The TV: a 1920x1080 mode at about 60 Hz (the canvas size: no scaling), and
- * a plane that can show it. */
+/* The window's surface. Dozen presents to the CoreWindow of this thread and does not read the handle it is given, but
+ * the call wants a window handle, so a placeholder goes in. The TV's mode is the console's: asked for through
+ * HdmiDisplayInformation (plat_uwp.cpp) before the swap chain is made. */
 static bool create_surface(char *error, size_t size)
 {
-    uint32_t n = 1;
-    VkDisplayPropertiesKHR display;
-    VkResult r = vkGetPhysicalDeviceDisplayPropertiesKHR(V.gpu, &n, &display);
-    if ((r != VK_SUCCESS && r != VK_INCOMPLETE) || n == 0)
+    VkWin32SurfaceCreateInfoKHR info = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
+    info.hinstance = GetModuleHandleW(NULL);
+    info.hwnd = (HWND)(uintptr_t)1;
+    CHECK(vkCreateWin32SurfaceKHR(V.instance, &info, NULL, &V.surface), "vkCreateWin32SurfaceKHR");
+    int tv_w = 0, tv_h = 0;
+    double tv_hz = 0;
+    if (uwp_current_display_mode(&tv_w, &tv_h, &tv_hz))
     {
-        snprintf(error, size, "no display");
-        return false;
+        V.display_hz = tv_hz;
+        snprintf(V.description, sizeof(V.description), "%dx%d @ %.2f Hz%s", tv_w, tv_h, tv_hz,
+                 want_high_refresh ? (tv_hz > 100.0 ? " (frame generation: 120 Hz)" : " (frame generation: no 120 Hz mode)") : "");
     }
-    VkDisplayModePropertiesKHR modes[16];
-    uint32_t mode_count = 16;
-    vkGetDisplayModePropertiesKHR(V.gpu, display.display, &mode_count, modes);
-    int best = -1, at60 = -1, at120 = -1;
-    /* the size asked for, else the canvas's (the mode is searched again at the canvas's size when the TV has none like it) */
-    uint32_t mode_w = want_width > 0 ? (uint32_t)want_width : (uint32_t)V.cw;
-    uint32_t mode_h = want_height > 0 ? (uint32_t)want_height : (uint32_t)V.ch;
-    for (int pass = 0; pass < 2; ++pass)
+    else
     {
-        for (uint32_t i = 0; i < mode_count; ++i)
-        {
-            const VkDisplayModeParametersKHR *p = &modes[i].parameters;
-            if (pass == 0)
-                SwanStationPS5_log("vulkan: display mode %ux%u @ %.2f Hz", p->visibleRegion.width,
-                                   p->visibleRegion.height, p->refreshRate / 1000.0);
-            bool size_ok = p->visibleRegion.width == mode_w && p->visibleRegion.height == mode_h;
-            if (size_ok && p->refreshRate >= 59000 && p->refreshRate <= 61000)
-                at60 = (int)i;
-            if (size_ok && p->refreshRate >= 119000 && p->refreshRate <= 121000)
-                at120 = (int)i;
-            if (size_ok && best < 0)
-                best = (int)i;
-        }
-        if (best >= 0 || mode_w == (uint32_t)V.cw)
-            break;
-        mode_w = (uint32_t)V.cw;
-        mode_h = (uint32_t)V.ch;
+        V.display_hz = 0;
+        snprintf(V.description, sizeof(V.description), "window");
     }
-    /* 60 Hz; 120 for frame generation when it was on at start and the TV has it */
-    if (at60 >= 0)
-        best = at60;
-    if (want_high_refresh && at120 < 0)
-    {
-        uint64_t area = 0;
-        for (uint32_t i = 0; i < mode_count; ++i)
-        {
-            const VkDisplayModeParametersKHR *p = &modes[i].parameters;
-            uint64_t a = (uint64_t)p->visibleRegion.width * p->visibleRegion.height;
-            if (p->refreshRate >= 119000 && p->refreshRate <= 121000 && a > area)
-            {
-                area = a;
-                at120 = (int)i;
-            }
-        }
-        if (at120 >= 0)
-            SwanStationPS5_log("vulkan: no 120 Hz mode at the usual size, using %ux%u", modes[at120].parameters.visibleRegion.width,
-                               modes[at120].parameters.visibleRegion.height);
-    }
-    if (want_high_refresh && at120 >= 0)
-        best = at120;
-    else if (want_high_refresh)
-        SwanStationPS5_log("vulkan: no 120 Hz mode (the TV or the console has none), staying at 60 Hz");
-    if (best < 0)
-    {
-        if (mode_count == 0)
-        {
-            snprintf(error, size, "no display modes");
-            return false;
-        }
-        best = 0;
-    }
-    const VkDisplayModePropertiesKHR *mode = &modes[best];
-
-    VkDisplayPlanePropertiesKHR planes[8];
-    uint32_t plane_count = 8;
-    vkGetPhysicalDeviceDisplayPlanePropertiesKHR(V.gpu, &plane_count, planes);
-    uint32_t plane = 0;
-    for (uint32_t i = 0; i < plane_count; ++i)
-    {
-        VkDisplayKHR supported[4];
-        uint32_t count = 4;
-        vkGetDisplayPlaneSupportedDisplaysKHR(V.gpu, i, &count, supported);
-        bool ok = false;
-        for (uint32_t k = 0; k < count; ++k)
-            ok |= supported[k] == display.display;
-        if (ok)
-        {
-            plane = i;
-            break;
-        }
-    }
-    VkDisplayPlaneCapabilitiesKHR caps;
-    vkGetDisplayPlaneCapabilitiesKHR(V.gpu, mode->displayMode, plane, &caps);
-    VkDisplayPlaneAlphaFlagBitsKHR alpha = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
-    if (!(caps.supportedAlpha & alpha))
-        for (uint32_t bit = 1; bit <= VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR; bit <<= 1)
-            if (caps.supportedAlpha & bit)
-            {
-                alpha = (VkDisplayPlaneAlphaFlagBitsKHR)bit;
-                break;
-            }
-
-    VkDisplaySurfaceCreateInfoKHR info = {VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR};
-    info.displayMode = mode->displayMode;
-    info.planeIndex = plane;
-    info.planeStackIndex = plane < plane_count ? planes[plane].currentStackIndex : 0;
-    info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    info.globalAlpha = 1.0f;
-    info.alphaMode = alpha;
-    info.imageExtent = mode->parameters.visibleRegion;
-    CHECK(vkCreateDisplayPlaneSurfaceKHR(V.instance, &info, NULL, &V.surface),
-          "vkCreateDisplayPlaneSurfaceKHR");
-    V.display_hz = mode->parameters.refreshRate / 1000.0;
-    int at = snprintf(V.description, sizeof(V.description), "%ux%u @ %.2f Hz%s; modes:",
-                      mode->parameters.visibleRegion.width, mode->parameters.visibleRegion.height,
-                      mode->parameters.refreshRate / 1000.0,
-                      want_high_refresh ? (at120 >= 0 ? " (frame generation: 120 Hz)" : " (frame generation: no 120 Hz mode)") : "");
-    for (uint32_t i = 0; i < mode_count && at > 0 && at < (int)sizeof(V.description) - 24; ++i)
-        at += snprintf(V.description + at, sizeof(V.description) - at, " %ux%u@%.0f", modes[i].parameters.visibleRegion.width,
-                       modes[i].parameters.visibleRegion.height, modes[i].parameters.refreshRate / 1000.0);
     return true;
 }
 
@@ -1929,13 +1831,14 @@ static void present_frame(bool ui, const uint32_t *pixels, size_t pitch_bytes)
             V.fg_pacing = ssfg_pacing_create();
         if (fresh && V.fg_pacing)
         {
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
+            LARGE_INTEGER qpc, qpf;
+            QueryPerformanceCounter(&qpc);
+            QueryPerformanceFrequency(&qpf);
             const uint32_t already = V.fg_already;
             V.fg_already = 0;
             V.fg_counted = false;
             FgDecision d = ssfg_pacing_frame(V.fg_pacing, vsyncs, already, V.core_hz > 20.0 ? V.core_hz : 59.94,
-                                             V.display_hz > 20.0 ? V.display_hz : 59.94, ts.tv_sec + ts.tv_nsec * 1e-9,
+                                             V.display_hz > 20.0 ? V.display_hz : 59.94, (double)qpc.QuadPart / (double)qpf.QuadPart,
                                              V.speed > 0.0 ? V.speed : 100.0, V.nominal, V.fg_max);
             /* the log of the pacing, off until it is needed again:
             if (d.state != V.fg_state)
@@ -2311,7 +2214,7 @@ bool vkp_adopt_device(VkDevice device, VkQueue queue, uint32_t family, char *err
     return ok;
 }
 
-/* Another mode of the TV while running (Settings > System > SwanStationPS5 > Output resolution). The swapchain and what
+/* Another mode of the TV while running (Settings > System > SwanStation > Output resolution). The swapchain and what
  * hangs from it are made again on the new mode's surface, as when the screen moves to a core's device; the interface's
  * textures go to the GPU again on their own. A mode the TV lacks gives the canvas's size; if even that fails, false. */
 bool vkp_set_mode(int width, int height, char *error, size_t size)

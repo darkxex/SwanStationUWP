@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - settings stored as key=value lines in <root>/SwanStationPS5.ini.
+ * SwanStation - settings stored as key=value lines in <root>/SwanStationPS5.ini.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "config.h"
@@ -448,7 +448,7 @@ bool config_save(const Settings *s, const char *path)
     if (!f)
         return false;
     fprintf(f,
-            "# SwanStationPS5 settings\n"
+            "# SwanStation settings\n"
             "smooth=%d\nshow_fps=%d\nregion=%d\n"
             "dithering=%d\ncd_speed=%d\nanalog=%d\nstate_slot=%d\nlast_game=%d\n"
             "cover_style=%d\ncover_download=%d\nui_sound=%d\nui_volume=%d\n"

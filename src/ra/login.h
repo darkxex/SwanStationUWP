@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroAchievements password sign-in (shared by the console's own
+ * SwanStation - RetroAchievements password sign-in (shared by the console's own
  * sign-in screen and the phone page).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

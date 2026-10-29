@@ -1,8 +1,8 @@
 /*
- * SwanStationPS5 - tips for a game, shown in the shelf's Details panel.
+ * SwanStation - tips for a game, shown in the shelf's Details panel.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Some come from what SwanStationPS5 knows about the game here (its discs, a manual), some from assets/game-tips.txt (light guns,
+ * Some come from what SwanStation knows about the game here (its discs, a manual), some from assets/game-tips.txt (light guns,
  * multitap games, LibCrypt discs...).
  */
 #include "tips.h"
@@ -51,9 +51,9 @@ int tips_for(const Game *g, const Settings *settings, char lines[][TIP_LEN], int
     int n = 0;
     (void)settings;
     if (g->discs > 1 && n < max)
-        snprintf(lines[n++], TIP_LEN, tr("%d discs: in the game, SwanStationPS5 menu > Disc."), g->discs);
+        snprintf(lines[n++], TIP_LEN, tr("%d discs: in the game, SwanStation menu > Disc."), g->discs);
     if (g->folder[0] && has_manual(g) && n < max)
-        str_copy(lines[n++], TIP_LEN, tr("Has a manual: in the game, SwanStationPS5 menu > Manual."));
+        str_copy(lines[n++], TIP_LEN, tr("Has a manual: in the game, SwanStation menu > Manual."));
 
     if (!known && !known_tried)
     {

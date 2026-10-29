@@ -1,11 +1,11 @@
 /*
- * SwanStationPS5 - what DuckStation's game database knows about each disc: genre,
+ * SwanStation - what DuckStation's game database knows about each disc: genre,
  * release, players, the controllers it takes, and the settings it's known to
  * break with.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The database (data/resources/gamedb.yaml in github.com/stenzek/duckstation)
- * isn't part of SwanStationPS5: the console downloads it once and keeps a compact
+ * isn't part of SwanStation: the console downloads it once and keeps a compact
  * index, <root>/cache/gamedb.txt (one line per serial, sorted), refreshed
  * after a month. Until it's there, every lookup simply finds nothing.
  */

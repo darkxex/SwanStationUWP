@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SwanStation Xbox - the UWP package for Xbox Series X|S in developer mode (Visual Studio 2022, "Universal Windows
+  Platform development" and "C++ (v143) Universal Windows Platform tools" components, x64 only).
+
+  Sources are everything under ..\src except what belongs to the PS5 build (SDL platform layer, ps5_*, libnfs/NTFS readers,
+  libcurl). Needs, before building:
+    tools\fetch-mesa.ps1   -> xbox\Mesa\x64\*.dll        (Mesa Dozen: Vulkan on Direct3D 12)
+    tools\build-core.ps1   -> xbox\Core\x64\swanstation_libretro.dll
+    tools\prepare-xbox.ps1 does both, and the assets.
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildProjectDirectory)\packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('$(MSBuildProjectDirectory)\packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.props')" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7d1b6a3e-2c58-4f0a-9a47-3e5c1d8b6f02}</ProjectGuid>
+    <Keyword>DirectXApp</Keyword>
+    <RootNamespace>SwanStationXbox</RootNamespace>
+    <ProjectName>SwanStationXbox</ProjectName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetLatestSDKTargetPlatformVersion('Windows', '10.0'))</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
+    <CppWinRTOptimized>true</CppWinRTOptimized>
+    <CppWinRTRootNamespaceAutoMerge>false</CppWinRTRootNamespaceAutoMerge>
+    <GenerateManifest>false</GenerateManifest>
+    <AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
+    <PackageCertificateKeyFile>$(MSBuildProjectDirectory)\SwanStationXbox_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <AppxBundle>Never</AppxBundle>
+    <AppxPackageDir>$(MSBuildProjectDirectory)\..\dist\</AppxPackageDir>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\..\build\xbox\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\..\build\xbox\obj\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <SDLCheck>false</SDLCheck>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <ForcedIncludeFiles>$(MSBuildProjectDirectory)\..\src\platform\uwp\compat\uwp_compat.h</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>
+        $(MSBuildProjectDirectory)\..\src\platform\uwp;
+        $(MSBuildProjectDirectory)\..\src\platform\uwp\compat;
+        $(MSBuildProjectDirectory)\..\src;
+        $(MSBuildProjectDirectory)\..\third_party\rcheevos\include;
+        $(MSBuildProjectDirectory)\..\third_party\stb;
+        $(MSBuildProjectDirectory)\..\third_party\swanstation\dep\libretro-common\include;
+        $(MSBuildProjectDirectory)\..\third_party\vulkan-headers\include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SwanStationXbox_UWP=1;SwanStationPS5_VULKAN=1;VK_USE_PLATFORM_WIN32_KHR=1;RC_CLIENT_SUPPORTS_HASH=1;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- the frontend's C is C11 with a few GNU idioms (compat/uwp_compat.h); these are the warnings that are noise there -->
+      <DisableSpecificWarnings>4100;4101;4127;4244;4267;4305;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <AdditionalDependencies>windowsapp.lib;xaudio2.lib;winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- ===================================================================== sources -->
+  <ItemGroup>
+    <!-- the frontend (C), without the PS5 build's own files -->
+    <ClCompile Include="..\src\**\*.c" Exclude="
+        ..\src\platform\plat_sdl.c;
+        ..\src\platform\ps5_*.c;
+        ..\src\platform\console_curl_ps5.c;
+        ..\src\net.c;
+        ..\src\ntfs\**;
+        ..\src\nfs\**">
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <!-- the UWP platform layer (C++/WinRT, XAudio2) -->
+    <ClCompile Include="..\src\platform\uwp\*.cpp"><CompileAs>CompileAsCpp</CompileAs></ClCompile>
+    <!-- RetroAchievements (rcheevos, MIT), all but the RAIntegration bridge -->
+    <ClCompile Include="..\third_party\rcheevos\src\**\*.c" Exclude="..\third_party\rcheevos\src\rc_client_raintegration.c">
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\**\*.h" Exclude="..\src\platform\uwp\SDL2\**;..\src\platform\uwp\compat\**" />
+  </ItemGroup>
+
+  <!-- ===================================================================== package contents -->
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="SwanStationXbox_TemporaryKey.pfx" Condition="Exists('SwanStationXbox_TemporaryKey.pfx')" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\*.png" />
+  </ItemGroup>
+  <!-- the interface's covers, fonts, shelves and indexes: the PS5 build's assets folder, unchanged -->
+  <ItemGroup>
+    <None Include="..\assets\**\*">
+      <DeploymentContent>true</DeploymentContent>
+      <Link>assets\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+  <!-- Mesa Dozen (Vulkan on Direct3D 12) and the SwanStation core: DLLs a UWP app may only load from its package -->
+  <ItemGroup>
+    <None Include="Mesa\$(Platform)\*.dll">
+      <DeploymentContent>true</DeploymentContent>
+      <Link>%(Filename)%(Extension)</Link>
+    </None>
+    <None Include="Core\$(Platform)\swanstation_libretro.dll">
+      <DeploymentContent>true</DeploymentContent>
+      <Link>%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(MSBuildProjectDirectory)\packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(MSBuildProjectDirectory)\packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project needs a NuGet package that is missing: run "msbuild -t:restore" (tools\build-xbox.ps1 does).</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\packages\Microsoft.Windows.CppWinRT.2.0.250303.1\build\native\Microsoft.Windows.CppWinRT.props')" Text="$(ErrorText)" />
+  </Target>
+</Project>

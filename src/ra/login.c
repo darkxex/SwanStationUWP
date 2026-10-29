@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroAchievements password sign-in.
+ * SwanStation - RetroAchievements password sign-in.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "login.h"

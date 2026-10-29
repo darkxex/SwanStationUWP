@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 v2 - Vulkan bring-up probe (logs the GPU RADV finds).
+ * SwanStation v2 - Vulkan bring-up probe (logs the GPU RADV finds).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_VK_PROBE_H

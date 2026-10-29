@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroArch .cht cheat files (GameShark / Action Replay codes).
+ * SwanStation - RetroArch .cht cheat files (GameShark / Action Replay codes).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_CHEATS_H

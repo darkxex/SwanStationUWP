@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - platform layer (SDL2 on both PS5 and desktop).
+ * SwanStation - platform layer (SDL2 on both Xbox and desktop).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_PLATFORM_H
@@ -14,14 +14,14 @@ const char *plat_screen_info(void);
 void plat_shutdown(void);
 void plat_release(void);
 
-/* PS5: asks the HEN to let SwanStationPS5 list /data. Call before plat_init, while the
- * process is single-threaded. Returns false (with the reason) when SwanStationPS5 stays
+/* Xbox: asks the HEN to let SwanStation list /data. Call before plat_init, while the
+ * process is single-threaded. Returns false (with the reason) when SwanStation stays
  * sandboxed: files still open and save, but folders can't be listed, so the
  * library comes from the index the sync tool writes. Desktop: always true. */
 bool plat_prepare_storage(char *error, size_t size);
-/* "sandboxed read ok, write no, list no": measured before unlocking (PS5). */
+/* "sandboxed read ok, write no, list no": measured before unlocking (Xbox). */
 const char *plat_sandbox_probe(void);
-/* Settings > System > Unlock /data with etaHEN (PS5); takes effect next launch. */
+/* Settings > System > Unlock /data with etaHEN (Xbox); takes effect next launch. */
 bool plat_unlock_disabled(void);
 void plat_set_unlock_disabled(bool disabled);
 void plat_default_root(char *out, size_t size);
@@ -35,8 +35,8 @@ void plat_set_lightbar(int port, uint32_t rgb);
  * (plat_poll, rumble, light bar, triggers) are players. */
 void plat_set_player_order(const int order[SwanStationPS5_MAX_PADS]);
 void plat_player_order(int order[SwanStationPS5_MAX_PADS]);
-const char *plat_pad_name(int port); /* the PS5 user holding it, or the controller's name */
-/* DualSense extras; nothing happens where they aren't supported */
+const char *plat_pad_name(int port); /* the Xbox user holding it, or the controller's name */
+/* Xbox controller extras; nothing happens where they aren't supported */
 void plat_pad_motion(bool on); /* PadState.quat while on */
 void plat_pad_touch(bool on);  /* PadState.touching / touch_x / touch_y while on */
 typedef struct
@@ -76,7 +76,7 @@ int plat_system_language(void);
  * (drawing flushed first); averages are logged every 120 frames. */
 void plat_profile(const char *name);
 /* A full-screen grey picture (w x h, one byte a pixel) times a colour,
- * as the background: written straight into the canvas on the PS5. */
+ * as the background: written straight into the canvas on the Xbox. */
 void plat_draw_backdrop(const uint8_t *grey, int w, int h, uint32_t tint_argb);
 /* The grey picture given to plat_draw_backdrop was rewritten in place (another theme): the GPU interface keeps a copy. */
 void plat_backdrop_changed(void);
@@ -90,7 +90,7 @@ void plat_audio_clear(void);
 void plat_audio_set_ratio(double ratio); /* >1 plays the sound a little faster (it takes more input per output), 1 untouched */
 double plat_display_hz(void);            /* the screen's refresh rate, 0 when unknown */
 
-/* Drawing in output pixels (1920x1080 on PS5). */
+/* Drawing in output pixels (1920x1080 on Xbox). */
 int plat_width(void);
 int plat_height(void);
 void plat_begin_frame(uint32_t clear_argb);
@@ -127,7 +127,7 @@ void plat_texture_size(const PlatTexture *texture, int *width, int *height);
 void plat_draw_mesh(PlatTexture *texture, const PlatVertex *vertices, int vertex_count,
                     const int *indices, int index_count);
 /* Copies a whole texture into a rectangle: one blit, no seams. Much cheaper
- * than a mesh with the software renderer the PS5 build uses. */
+ * than a mesh with the software renderer the Xbox build uses. */
 void plat_draw_texture(PlatTexture *texture, float x, float y, float w, float h, uint32_t tint,
                        bool blend);
 /* Part of a texture (sx, sy, sw, sh in texels) into a rectangle, blended and
@@ -138,11 +138,11 @@ void plat_draw_texture_region(PlatTexture *texture, int sx, int sy, int sw, int 
 void plat_fill_rectf(float x, float y, float w, float h, uint32_t argb);
 /* Clip drawing to a rectangle (w <= 0 turns clipping off). */
 void plat_set_clip(int x, int y, int w, int h);
-/* Full-screen-relative path to packaged read-only assets (/app0/assets on PS5). */
+/* Full-screen-relative path to packaged read-only assets (/app0/assets on Xbox). */
 void plat_asset_path(char *out, size_t size, const char *relative);
 
 uint64_t plat_ticks_us(void);
 void plat_sleep_us(uint32_t us);
-void plat_notify(const char *message); /* PS5 system notification; desktop log */
+void plat_notify(const char *message); /* Xbox system notification; desktop log */
 
 #endif

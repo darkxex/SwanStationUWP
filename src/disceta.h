@@ -1,4 +1,4 @@
-/* SwanStationPS5 - time left of a disc installation, shared by the disc daemon and the app.
+/* SwanStation - time left of a disc installation, shared by the disc daemon and the app.
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #ifndef SwanStationPS5_DISCETA_H
 #define SwanStationPS5_DISCETA_H

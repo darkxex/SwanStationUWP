@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroAchievements (retroachievements.org) through rcheevos.
+ * SwanStation - RetroAchievements (retroachievements.org) through rcheevos.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * - Sign-in uses the token from retroachievements.ini; the password is never
@@ -498,7 +498,7 @@ void ra_init(const Paths *p)
     rc_client_set_hardcore_enabled(client, hardcore ? 1 : 0);
     char clause[128] = "";
     rc_client_get_user_agent_clause(client, clause, sizeof(clause));
-    snprintf(agent, sizeof(agent), SwanStationPS5_NAME "/" SwanStationPS5_VERSION " (PS5) %s", clause);
+    snprintf(agent, sizeof(agent), SwanStationPS5_NAME "/" SwanStationPS5_VERSION " (Xbox) %s", clause);
 
     rc_hash_init_error_message_callback(hash_error);
 

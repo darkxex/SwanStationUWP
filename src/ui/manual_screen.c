@@ -1,11 +1,11 @@
 /*
- * SwanStationPS5 - a game's manual: page images you put in the game's folder.
+ * SwanStation - a game's manual: page images you put in the game's folder.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * <game folder>/manual/ holds one image per page (.jpg or .png). With /data
- * unlocked every image there is a page, in name order; a sandboxed SwanStationPS5
+ * unlocked every image there is a page, in name order; a sandboxed SwanStation
  * can't list folders, so it looks for numbered pages: 1.jpg, 2.jpg... (also
- * 01, 001 and .png). SwanStationPS5 never downloads manuals.
+ * 01, 001 and .png). SwanStation never downloads manuals.
  */
 #include "../app.h"
 #include "../i18n.h"

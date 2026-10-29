@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - interface icons (Tabler Icons subset).
+ * SwanStation - interface icons (Tabler Icons subset).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_ICONS_H

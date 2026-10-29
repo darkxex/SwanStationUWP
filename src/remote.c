@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - settings from a phone: a small web page on the local network.
+ * SwanStation - settings from a phone: a small web page on the local network.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * One thread answers HTTP on REMOTE_PORT:
@@ -394,7 +394,7 @@ static void serve_saves(int fd, const char *method, const char *path, const char
         query(q + 1, "type", kind, sizeof(kind));
         query(q + 1, "slot", slot_s, sizeof(slot_s));
     }
-    /* ids are written by SwanStationPS5 itself (serials or title letters), so no escapes to undo */
+    /* ids are written by SwanStation itself (serials or title letters), so no escapes to undo */
     SDL_LockMutex(lock);
     const RemoteGame *found = find_game(id);
     RemoteGame g;

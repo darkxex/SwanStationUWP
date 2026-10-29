@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - TrueType text (Inter) on top of the platform mesh API.
+ * SwanStation - TrueType text (Inter) on top of the platform mesh API.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Glyphs for Latin-1 are packed into one atlas per (weight, size bucket) the
@@ -354,7 +354,7 @@ static int glyph_tag(const char *s, int *len)
                 {"Left", GLYPH_LEFT},     {"Right", GLYPH_RIGHT},   {"L1", GLYPH_L1},
                 {"R1", GLYPH_R1},         {"L2", GLYPH_L2},         {"R2", GLYPH_R2},
                 {"L3", GLYPH_L3},         {"R3", GLYPH_R3},         {"Options", GLYPH_START},
-                {"Select", GLYPH_SELECT}, {"Touchpad", GLYPH_TOUCHPAD}};
+                {"Select", GLYPH_SELECT}, {"View button", GLYPH_TOUCHPAD}};
     if (*s != '{')
         return -1;
     for (size_t i = 0; i < sizeof(TAGS) / sizeof(TAGS[0]); ++i)

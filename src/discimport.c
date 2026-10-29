@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - imports the PS1 disc in the USB CD drive. See discimport.h.
+ * SwanStation - imports the PS1 disc in the USB CD drive. See discimport.h.
  * The read loop follows ps-disc-detect (Al-Azif, GPL-3.0): READ TOC, then READ CD 16 sectors at a time into one
  * .bin of 2352-byte sectors, and a .cue with each track's mode. Unreadable sectors are retried, then zero-filled
  * and logged; too many abort the import. Files are written as .part and renamed only when everything went well.

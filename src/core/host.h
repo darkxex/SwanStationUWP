@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - libretro host for the statically linked SwanStation core.
+ * SwanStation - libretro host for the statically linked SwanStation core.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_HOST_H

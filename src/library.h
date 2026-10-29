@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - game library scanning.
+ * SwanStation - game library scanning.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_LIBRARY_H
@@ -37,9 +37,9 @@ void library_scan(Library *lib, const char *const *roots, int root_count);
 /* The same, adding to the games the library already has (from the sync index, when folders can't be listed). */
 void library_scan_append(Library *lib, const char *const *roots, int root_count);
 
-/* For a sandboxed SwanStationPS5 (folders can't be listed): reads the index written by
+/* For a sandboxed SwanStation (folders can't be listed): reads the index written by
  * tools/SwanStationPS5_sync.py, one game per line:
- *   title <TAB> serial <TAB> discs <TAB> /data/SwanStationPS5/games/.../file.m3u <TAB> disc name
+ *   title <TAB> serial <TAB> discs <TAB> LocalState/SwanStation/games/.../file.m3u <TAB> disc name
  * Returns false when the index can't be opened. */
 bool library_load_index(Library *lib, const char *index_path);
 void library_free(Library *lib);
@@ -54,7 +54,7 @@ bool library_remove_path(Library *lib, const char *path);
 
 /* Deletes the files that make the game appear on the shelf: the file the core loads (.cue, .m3u, .chd, .pbp, .iso...),
  * what a .cue or .m3u lists (its .bin, its discs), and the .sbi beside it. Only files inside the game's folder;
- * the folder goes too when it is one SwanStationPS5 made ("Title [serial]") and nothing else is left in it. Saves,
+ * the folder goes too when it is one SwanStation made ("Title [serial]") and nothing else is left in it. Saves,
  * states and covers are not touched. Returns how many files were deleted. */
 int library_delete_game_files(const Game *g);
 

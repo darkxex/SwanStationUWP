@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - xBR 2x (level 2), the edge-directed pixel-art scaler by Hyllian.
+ * SwanStation - xBR 2x (level 2), the edge-directed pixel-art scaler by Hyllian.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * For each source pixel E the 5x5 neighbourhood decides, per output corner,
@@ -15,13 +15,18 @@
  *
  * Speed: every source pixel is converted to Y/U/V once (a prepass), so the
  * ~50 colour distances per pixel are three subtractions each instead of
- * multiplications and divisions. Rows run in parallel via blit_parallel().
+ * multiplications and divisions. Rows run through blit_parallel().
  */
 #include "xbr.h"
 
-#include "blit.h"
-
 #include <stdlib.h>
+
+/* The Xbox build split the rows over worker threads (platform/blit.c); the only caller left is a small preview in
+ * Settings, so they run in one go. */
+static void blit_parallel(void (*fn)(void *ctx, int row_begin, int row_end), void *ctx, int rows)
+{
+    fn(ctx, 0, rows);
+}
 
 typedef struct
 {

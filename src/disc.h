@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - reads a game's serial (SLUS-01041 ...) from its disc image.
+ * SwanStation - reads a game's serial (SLUS-01041 ...) from its disc image.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_DISC_H

@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the interface drawn by the GPU (included by vk_present.c).
+ * SwanStation - the interface drawn by the GPU (included by vk_present.c).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The interface code draws through a few platform calls (plat_draw_texture, plat_draw_mesh, plat_fill_rect...).

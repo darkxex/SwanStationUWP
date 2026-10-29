@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - PlayStation X Super 5
+ * SwanStation - PlayStation X Super 5
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Entry point, game start/stop and the emulation screen. The other screens
@@ -22,7 +22,7 @@
 #include "discimport.h"
 #include "i18n.h"
 #include "platform/platform.h"
-#include "platform/ps5_crash.h"
+#include "platform/crash.h"
 #include "platform/vk/vk_probe.h"
 #include "nfs/nfs.h"
 #include "play.h"
@@ -111,14 +111,14 @@ void app_toast_for(const char *message, float seconds)
     show_next_toast(text, length_us);
 }
 
-/* A message's line, with the pictures of the buttons where it says [touchpad], [L3] or [R3]; its width (drawn when asked) */
+/* A message's line, with the pictures of the buttons where it says [View button], [L3] or [R3]; its width (drawn when asked) */
 static float toast_runs(const char *s, float x, float y, float a, bool draw)
 {
     static const struct
     {
         const char *tag;
         enum PadGlyph glyph;
-    } TAGS[] = {{"[touchpad]", GLYPH_TOUCHPAD}, {"[L3]", GLYPH_L3}, {"[R3]", GLYPH_R3}};
+    } TAGS[] = {{"[View button]", GLYPH_TOUCHPAD}, {"[L3]", GLYPH_L3}, {"[R3]", GLYPH_R3}};
     const float size = 26, gap = 10;
     float start = x;
     while (*s)
@@ -451,7 +451,7 @@ void app_rescan(void)
     }
     /* The games folder, then on each drive both <drive>/<name> and <drive>/<name>/games, for our
      * folder name and for the PSXS5 one. */
-    static const char *const names[] = {"SwanStationPS5", "PSXS5"};
+    static const char *const names[] = {"SwanStation", "PSXS5"};
     static char drive_roots[DRIVE_COUNT * 2 * 2][SwanStationPS5_PATH_MAX];
     static char usb_roots[DRIVE_COUNT][SwanStationPS5_PATH_MAX];
     static char nfs_roots[NFS_MAX_SHARES + NTFSFS_MAX_VOLUMES * 2][NFS_PATH_MAX];
@@ -473,7 +473,7 @@ void app_rescan(void)
             roots[root_count++] = plain;
             roots[root_count++] = games;
         }
-    /* Settings > System > SwanStationPS5 > Games folder on drives: that name on every drive at once, as the drive's
+    /* Settings > System > SwanStation > Games folder on drives: that name on every drive at once, as the drive's
      * number changes with the ones plugged in */
     if (app.global.usb_folder[0])
         for (int u = 0; u < DRIVE_COUNT; ++u)
@@ -499,7 +499,7 @@ void app_rescan(void)
         {
             if (app.global.usb_folder[0])
                 snprintf(nfs_roots[shared_count++], NFS_PATH_MAX, "%s/%s", ntfs_points[n], app.global.usb_folder);
-            snprintf(nfs_roots[shared_count++], NFS_PATH_MAX, "%s/SwanStationPS5/games", ntfs_points[n]);
+            snprintf(nfs_roots[shared_count++], NFS_PATH_MAX, "%s/SwanStation/games", ntfs_points[n]);
         }
     }
     for (int n = 0; n < shared_count; ++n)
@@ -647,7 +647,7 @@ static void question_draw(void)
     draw_rrect(x, y, w, h, TH_RADIUS, argb_alpha(TH_PILL_A(0xf8), question_t));
     icon_draw(ICON_REFRESH, x + (w - 64) * 0.5f, y + pad, 64, argb_alpha(TH_FOCUS, question_t));
     text_draw_fit(x + w * 0.5f, y + pad + 64 + 18, 38, FONT_BOLD, argb_alpha(TH_TEXT, question_t), ALIGN_CENTER, w - 2 * pad,
-                  tr("SwanStationPS5 was updated to the latest version!"));
+                  tr("SwanStation was updated to the latest version!"));
     /* the question, word-wrapped and centred */
     char line[256];
     float yy = y + pad + 64 + 18 + 38 + 26;
@@ -697,7 +697,7 @@ static void question_draw(void)
 /* ---------------------------------------------------------------- achievements banner */
 
 static bool opened_by_daemon;  /* the disc daemon started the app (payload/discd.c leaves <root>/daemon-launch) */
-/* A home-screen forwarder (the PS5 Forwarder Format) starts the app with --rom <path> and maybe --exit-after-game:
+/* A home-screen forwarder (the Xbox Forwarder Format) starts the app with --rom <path> and maybe --exit-after-game:
  * that game starts at once, and with the flag the app closes when it ends. */
 static char launch_rom[SwanStationPS5_PATH_MAX];
 static bool exit_after_game;
@@ -1162,7 +1162,7 @@ static void sbi_check_draw(void)
     draw_rrect(x + 32, y + 56, fmaxf(12.0f, (w - 64) * fminf(p, 1.0f)), 12, 6, TH_FOCUS);
 }
 
-/* The disc import (Settings > System > SwanStationPS5 > Import disc, or a disc put in the drive on the shelf): while it
+/* The disc import (Settings > System > SwanStation > Import disc, or a disc put in the drive on the shelf): while it
  * runs the buttons stay out of every screen and nothing can cancel it; when it ends the result is shown and the
  * library looks for the new game */
 static char handled_discs[16][24]; /* discs already dealt with since the app opened: each one starts once */
@@ -2216,8 +2216,8 @@ static uint32_t map_buttons(uint32_t buttons)
     return out;
 }
 
-/* Speedrun timer: touchpad + Triangle starts/pauses, touchpad + Circle resets.
- * It counts only while the game runs (not in the SwanStationPS5 menu). */
+/* Speedrun timer: View button + Triangle starts/pauses, View button + Circle resets.
+ * It counts only while the game runs (not in the SwanStation menu). */
 static struct
 {
     bool shown, running;
@@ -2239,7 +2239,7 @@ static void draw_timer(void)
     text_draw(40 + w * 0.5f, 50, 34, FONT_BOLD, timer.running ? TH_TEXT : TH_GOLD, ALIGN_CENTER, text);
 }
 
-/* The DualSense light bars: per player, or the cover's colour. */
+/* The Xbox controller light bars: per player, or the cover's colour. */
 static void update_lightbars(void)
 {
     static const uint32_t players[SwanStationPS5_MAX_PADS] = {0x2050ff, 0xff2030, 0x20d040, 0xff40c0};
@@ -2284,8 +2284,8 @@ static void game_screen(PadState *pads)
         }
     }
 
-    /* Touchpad: a tap is the PS1's Select (the PS5 SDL driver has no Create
-     * button); the menu is the touchpad held for 1 second. */
+    /* View button: a tap is the PS1's Select (the Xbox SDL driver has no Create
+     * button); the menu is the View button held for 1 second. */
     static uint64_t touch_since[SwanStationPS5_MAX_PADS];
     static bool touch_used[SwanStationPS5_MAX_PADS];
     static int select_frames[SwanStationPS5_MAX_PADS];
@@ -2293,11 +2293,11 @@ static void game_screen(PadState *pads)
     bool touch = false, chord = false;
     uint64_t t_now = plat_ticks_us();
     bool open_menu = false;
-    /* touchpad held + R2: fast forward; + L2: rewind. The shortcuts are player 1's; on the other
-     * pads the touchpad is just that pad's Select */
+    /* View button held + R2: fast forward; + L2: rewind. The shortcuts are player 1's; on the other
+     * pads the View button is just that pad's Select */
     uint32_t all = pads[0].buttons;
-    /* touchpad + two shoulder buttons: the DualShock's analog mode combo (L1 + R1 + Select...): the
-     * touchpad is the Select held down, and the shoulders go to the game */
+    /* View button + two shoulder buttons: the DualShock's analog mode combo (L1 + R1 + Select...): the
+     * View button is the Select held down, and the shoulders go to the game */
     const uint32_t shoulders = BIT(BTN_L1) | BIT(BTN_R1) | BIT(BTN_L2) | BIT(BTN_R2);
     for (int i = 0; i < SwanStationPS5_MAX_PADS; ++i)
     {
@@ -2310,7 +2310,7 @@ static void game_screen(PadState *pads)
     speed_changed = fast || back;
     if (touch && (fast || back || chord))
         touch_used[0] = true; /* a combo, not Select or the menu */
-    /* touchpad + Square: screenshot; + Triangle / Circle: timer */
+    /* View button + Square: screenshot; + Triangle / Circle: timer */
     static uint32_t combo_all_prev;
     uint32_t newly = touch ? all & ~combo_all_prev : 0;
     combo_all_prev = all;
@@ -2320,7 +2320,7 @@ static void game_screen(PadState *pads)
     if (newly & BIT(BTN_SQUARE))
     {
         bool ok = play_screenshot();
-        app_toast(ok ? "Screenshot saved in /data/SwanStationPS5/screenshots" : "Could not save the screenshot");
+        app_toast(ok ? "Screenshot saved in LocalState/SwanStation/screenshots" : "Could not save the screenshot");
         sfx_play(ok ? SFX_SELECT : SFX_BACK);
     }
     if (newly & BIT(BTN_TRIANGLE))
@@ -2336,8 +2336,8 @@ static void game_screen(PadState *pads)
         timer.shown = false;
         app_toast("Timer reset");
     }
-    /* The touchpad is also the shortcuts' key, so Select waits this long to be sure no shortcut
-     * follows; after it, holding the touchpad holds Select until a shortcut is used. */
+    /* The View button is also the shortcuts' key, so Select waits this long to be sure no shortcut
+     * follows; after it, holding the View button holds Select until a shortcut is used. */
     const uint64_t select_hold_us = 0, tap_us = 150000;
     for (int i = 0; i < SwanStationPS5_MAX_PADS; ++i)
     {
@@ -2356,7 +2356,7 @@ static void game_screen(PadState *pads)
             touch_used[i] = false;
         }
     }
-    /* player 1's menu combination held for the chosen time: the SwanStationPS5 menu */
+    /* player 1's menu combination held for the chosen time: the SwanStation menu */
     static uint64_t menu_since;
     static const uint64_t MENU_HOLD_US[3] = {0, 500000, 1000000};
     const uint32_t first_pad = pads[0].buttons;
@@ -2384,7 +2384,7 @@ static void game_screen(PadState *pads)
     {
         if (i == 0 && (fast || back))
             pads[i].buttons &= ~(BIT(BTN_L2) | BIT(BTN_R2));
-        if (i == 0 && touch) /* the combo buttons go to SwanStationPS5, not the game */
+        if (i == 0 && touch) /* the combo buttons go to SwanStation, not the game */
             pads[i].buttons &= ~(chord ? combo_keys & ~BIT(BTN_R1) : combo_keys);
         pads[i].buttons = map_buttons(pads[i].buttons & ~BIT(BTN_MENU));
         if (chord_of[i])
@@ -2666,7 +2666,12 @@ static int stop_services(void *done)
 }
 #endif
 
+#if defined(SwanStationXbox_UWP)
+/* uwp_app.cpp runs this on the UI thread, once the window is active */
+int swanstation_main(int argc, char **argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
     for (int i = 1; i < argc; ++i)
     {
@@ -2676,7 +2681,7 @@ int main(int argc, char **argv)
             exit_after_game = true;
     }
     /* First thing: proves the loader accepted the title and main() runs. (Turned off: the notice showed on screen.)
-    plat_notify("SwanStationPS5 " SwanStationPS5_VERSION " starting...");
+    plat_notify("SwanStation " SwanStationPS5_VERSION " starting...");
     */
     char root[SwanStationPS5_PATH_MAX];
     plat_default_root(root, sizeof(root));
@@ -2703,6 +2708,7 @@ int main(int argc, char **argv)
     char video_out[8] = "";
     config_peek_string(app.paths.config, "video_out", video_out, sizeof(video_out));
     const bool high_refresh = atoi(video_out) == 1;
+#if !defined(SwanStationXbox_UWP) /* the PS5 reads its 120 Hz mode from the title's param.json; the Xbox is asked through the TV's display modes */
     if (high_refresh)
     {
         static const char *const params[] = {"/mnt/sandbox/PPSA98510_000/app0/sce_sys/param.json", "/app0/sce_sys/param.json",
@@ -2720,19 +2726,20 @@ int main(int argc, char **argv)
     }
     else
         setenv("PS5_VIDEOOUT_PARAM_JSON", "/nonexistent", 1);
+#endif
     plat_want_high_refresh(high_refresh);
     plat_want_output(2); /* always 4K (1080p when the TV lacks the mode) */
 
     if (!plat_init())
     {
         char msg[300];
-        snprintf(msg, sizeof(msg), "SwanStationPS5: %s", plat_init_error());
+        snprintf(msg, sizeof(msg), "SwanStation: %s", plat_init_error());
         plat_notify(msg);
         for (;;)
             plat_sleep_us(1000000);
     }
     if (!text_init())
-        plat_notify("SwanStationPS5: interface font missing from assets/fonts");
+        plat_notify("SwanStation: interface font missing from assets/fonts");
 
     /* Sandboxed or not, files in /data open and save; only listing differs. */
     const char *dirs[] = {app.paths.root,   app.paths.games,  app.paths.bios,
@@ -2758,7 +2765,7 @@ int main(int argc, char **argv)
     SwanStationPS5_log_open(log_path);
     ps5_crash_install(log_path);
 #if defined(__PROSPERO__)
-    /* the log's stderr lines go to klog: nc <PS5 IP> 3232 shows them live */
+    /* the log's stderr lines go to klog: nc <Xbox IP> 3232 shows them live */
     extern int ps5_klog_capture_stderr(const char *prefix);
     ps5_klog_capture_stderr("");
 #endif
@@ -2773,7 +2780,7 @@ int main(int argc, char **argv)
     {
         struct stat ext;
         char games[64];
-        snprintf(games, sizeof(games), "%s/SwanStationPS5/games", ext_drives[i]);
+        snprintf(games, sizeof(games), "%s/SwanStation/games", ext_drives[i]);
         if (!drive_usable(i))
             SwanStationPS5_log("games folder %s: %s is not available", games, ext_drives[i]);
         else if (stat(games, &ext) == 0)
@@ -2791,7 +2798,7 @@ int main(int argc, char **argv)
             if (!drive_usable(i))
                 continue;
             char ext_games[SwanStationPS5_PATH_MAX];
-            snprintf(ext_games, sizeof(ext_games), "%s/SwanStationPS5/games", drive_paths[i]);
+            snprintf(ext_games, sizeof(ext_games), "%s/SwanStation/games", drive_paths[i]);
             discimport_cleanup(ext_games);
         }
     }
@@ -2812,7 +2819,7 @@ int main(int argc, char **argv)
         disc_after_game = true;
         SwanStationPS5_log("started again after a game: the disc in the drive is shown on the shelf, with no question");
     }
-    SwanStationPS5_log("SwanStationPS5 %s starting, data root %s", SwanStationPS5_VERSION, app.paths.root);
+    SwanStationPS5_log("SwanStation %s starting, data root %s", SwanStationPS5_VERSION, app.paths.root);
     SwanStationPS5_log("screen: %s", plat_screen_info());
 #if defined(__PROSPERO__)
     extern size_t ps5_heap_size_mb(void);
@@ -2886,7 +2893,7 @@ int main(int argc, char **argv)
     }
     SwanStationPS5_log("build: %s %s", __DATE__, __TIME__);
     /* (Turned off: the notice showed on screen.)
-    plat_notify("SwanStationPS5 ready");
+    plat_notify("SwanStation ready");
     */
 
     bool quit = false;
@@ -3133,7 +3140,7 @@ int main(int argc, char **argv)
         plat_end_frame();
     }
 
-    /* Only the desktop build gets here; the PS5 shell closes the title. */
+    /* Only the desktop build gets here; the Xbox shell closes the title. */
     ps5_crash_step("shutdown");
     SwanStationPS5_log("shutdown: leaving the main loop");
     if (app.game)

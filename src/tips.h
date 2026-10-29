@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - tips for a game, shown in the shelf's Details panel.
+ * SwanStation - tips for a game, shown in the shelf's Details panel.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_TIPS_H

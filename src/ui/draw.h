@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - shape helpers built on plat_draw_mesh.
+ * SwanStation - shape helpers built on plat_draw_mesh.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_DRAW_H
@@ -24,11 +24,11 @@ enum PadGlyph
     GLYPH_R2,
     GLYPH_L3,
     GLYPH_R3,
-    GLYPH_START,    /* OPTIONS on a DualSense */
+    GLYPH_START,    /* OPTIONS on a Xbox controller */
     GLYPH_SELECT,
     GLYPH_TOUCHPAD,
     GLYPH_NONE,     /* "not mapped" */
-    GLYPH_PS1_START, /* the PS1 pad's START (OPTIONS is the DualSense's) */
+    GLYPH_PS1_START, /* the PS1 pad's START (OPTIONS is the Xbox controller's) */
     GLYPH_COUNT
 };
 

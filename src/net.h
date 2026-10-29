@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - minimal HTTPS download (libcurl).
+ * SwanStation - minimal HTTPS download (libcurl).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_NET_H

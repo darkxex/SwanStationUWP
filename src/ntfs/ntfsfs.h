@@ -1,9 +1,9 @@
 /*
- * SwanStationPS5 - games on NTFS disks (the frontend's side of src/ntfs/ntfsfs.cpp).
+ * SwanStation - games on NTFS disks (the frontend's side of src/ntfs/ntfsfs.cpp).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The console's kernel does not mount NTFS, so the app reads the disk itself (ntfs.c, bdev.c, part.c: the reader of
- * abcde6543/PS5-NTFS-BROWSER, GPL-3.0-or-later, without its writing part). Each volume is served to the whole process
+ * abcde6543/Xbox-NTFS-BROWSER, GPL-3.0-or-later, without its writing part). Each volume is served to the whole process
  * under /ntfs/<label>/<path> by passing the C library's file calls through nfs.cpp. Read-only.
  */
 #ifndef SwanStationPS5_NTFSFS_H

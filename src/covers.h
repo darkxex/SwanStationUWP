@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - cover art: local lookup, background download and decoding.
+ * SwanStation - cover art: local lookup, background download and decoding.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_COVERS_H

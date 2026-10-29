@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroArch .cht cheat files (GameShark / Action Replay codes).
+ * SwanStation - RetroArch .cht cheat files (GameShark / Action Replay codes).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Format (libretro-database):
@@ -624,7 +624,7 @@ bool cheats_load(CheatList *list, const Game *game, const char *cheats_dir)
     char path[SwanStationPS5_PATH_MAX] = "";
     int score = 0;
     /* 1. A .cht next to the game always wins. "cheats.cht" (placed by the sync
-     *    tool) opens without listing the folder, which a sandboxed SwanStationPS5 can't. */
+     *    tool) opens without listing the folder, which a sandboxed SwanStation can't. */
     bool found = false;
     if (game->folder[0])
     {

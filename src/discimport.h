@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - imports the PS1 disc in the USB CD drive: dumps it to <games>/<Title [serial]>/<Title [serial]>.bin
+ * SwanStation - imports the PS1 disc in the USB CD drive: dumps it to <games>/<Title [serial]>/<Title [serial]>.bin
  * and .cue, which the library then picks up like any other game. Runs in a thread; the screen shows a bar.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

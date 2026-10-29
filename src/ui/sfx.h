@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - interface sounds, synthesised at start-up (no sample files).
+ * SwanStation - interface sounds, synthesised at start-up (no sample files).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_SFX_H

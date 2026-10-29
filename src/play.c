@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - things around the running game: quick resume, state thumbnails,
+ * SwanStation - things around the running game: quick resume, state thumbnails,
  * rewind, fast forward, widescreen codes and fan-translation patches.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

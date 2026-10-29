@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroAchievements sign-in on the console: user name and password
+ * SwanStation - RetroAchievements sign-in on the console: user name and password
  * typed with an on-screen keyboard drawn by the app (the system keyboard
  * module stops the title from launching, see platform/ps5_shims.c).
  * SPDX-License-Identifier: GPL-3.0-or-later

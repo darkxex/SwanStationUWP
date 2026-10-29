@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - state and helpers shared by the screens (main.c owns them).
+ * SwanStation - state and helpers shared by the screens (main.c owns them).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_APP_H
@@ -41,7 +41,7 @@ typedef struct
     int game_index;           /* its library index */
     enum Screen screen;
     enum Screen settings_return;
-    bool settings_preview;    /* Settings opened from a game: the touchpad hides it and the game runs, to see the changes live */
+    bool settings_preview;    /* Settings opened from a game: the View button hides it and the game runs, to see the changes live */
     float settings_preview_time; /* seconds since the preview began (its notice fades out) */
     char storage_error[256];
     char drive_text[10][40]; /* the drives found when the app started, with their free space */

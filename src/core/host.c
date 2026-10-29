@@ -1,10 +1,9 @@
 /*
- * SwanStationPS5 - libretro host for the statically linked cores.
+ * SwanStation Xbox - libretro host.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * SwanStation is linked into SwanStationPS5 as a static archive (libswanstation.a, its
- * retro_* renamed swanstation_retro_* by tools/build-swanstation.sh). A table of
- * functions drives the core. Only the
+ * SwanStation is a DLL of the package (swanstation_libretro.dll, loaded with LoadPackagedLibrary: a UWP app may load
+ * only what it ships). A table of functions, filled from the DLL's retro_* exports, drives the core. Only the
  * environment callbacks the cores rely on are implemented; everything else
  * answers "unsupported" as libretro allows.
  */
@@ -20,7 +19,7 @@
 #include "../platform/vk/vk_present_hw.h" /* before libretro_vulkan.h: no prototypes */
 #include "libretro_vulkan.h"
 #endif
-#include "../platform/ps5_crash.h"
+#include "../platform/crash.h"
 
 void app_toast(const char *message); /* main.c: a short notice on screen */
 
@@ -61,45 +60,65 @@ typedef struct
     void (*cheat_set)(unsigned, bool, const char *);
 } CoreApi;
 
-#define CORE_API(label, p)                                                                         \
-    {                                                                                              \
-        label, p##retro_set_environment, p##retro_set_video_refresh, p##retro_set_audio_sample,  \
-            p##retro_set_audio_sample_batch, p##retro_set_input_poll, p##retro_set_input_state,  \
-            p##retro_init, p##retro_deinit, p##retro_load_game, p##retro_unload_game,            \
-            p##retro_get_system_av_info, p##retro_set_controller_port_device, p##retro_run,      \
-            p##retro_reset, p##retro_serialize_size, p##retro_serialize, p##retro_unserialize,   \
-            p##retro_get_memory_data, p##retro_get_memory_size, p##retro_cheat_reset,           \
-            p##retro_cheat_set                                                                  \
+#include <windows.h>
+
+static CoreApi SWANSTATION = {"SwanStation"};
+static bool core_loaded, core_load_tried;
+
+/* Fills SWANSTATION from the DLL; false (with the reason in error) when it is missing or lacks an export. */
+static bool core_load(char *error, size_t error_size)
+{
+    if (core_loaded)
+        return true;
+    if (core_load_tried)
+    {
+        snprintf(error, error_size, "The emulator (swanstation_libretro.dll) could not be loaded.");
+        return false;
     }
-
-#if !defined(SwanStationPS5_VULKAN)
-#error "SwanStation renders through Vulkan: build with APP_VULKAN=1"
-#endif
-
-#if defined(SwanStationPS5_VULKAN)
-void swanstation_retro_set_environment(retro_environment_t);
-void swanstation_retro_set_video_refresh(retro_video_refresh_t);
-void swanstation_retro_set_audio_sample(retro_audio_sample_t);
-void swanstation_retro_set_audio_sample_batch(retro_audio_sample_batch_t);
-void swanstation_retro_set_input_poll(retro_input_poll_t);
-void swanstation_retro_set_input_state(retro_input_state_t);
-void swanstation_retro_init(void);
-void swanstation_retro_deinit(void);
-bool swanstation_retro_load_game(const struct retro_game_info *);
-void swanstation_retro_unload_game(void);
-void swanstation_retro_get_system_av_info(struct retro_system_av_info *);
-void swanstation_retro_set_controller_port_device(unsigned, unsigned);
-void swanstation_retro_run(void);
-void swanstation_retro_reset(void);
-size_t swanstation_retro_serialize_size(void);
-bool swanstation_retro_serialize(void *, size_t);
-bool swanstation_retro_unserialize(const void *, size_t);
-void *swanstation_retro_get_memory_data(unsigned);
-size_t swanstation_retro_get_memory_size(unsigned);
-void swanstation_retro_cheat_reset(void);
-void swanstation_retro_cheat_set(unsigned, bool, const char *);
-static const CoreApi SWANSTATION = CORE_API("SwanStation", swanstation_);
-#endif
+    core_load_tried = true;
+    HMODULE dll = LoadPackagedLibrary(L"swanstation_libretro.dll", 0);
+    if (!dll)
+    {
+        SwanStationPS5_log("host: swanstation_libretro.dll could not be loaded (error %lu)", GetLastError());
+        snprintf(error, error_size, "The emulator (swanstation_libretro.dll) is missing from the package.");
+        return false;
+    }
+#define IMPORT(field, symbol)                                                                      \
+    do                                                                                             \
+    {                                                                                              \
+        *(FARPROC *)&SWANSTATION.field = GetProcAddress(dll, symbol);                              \
+        if (!SWANSTATION.field)                                                                    \
+        {                                                                                          \
+            SwanStationPS5_log("host: the emulator has no %s", symbol);                            \
+            snprintf(error, error_size, "The emulator does not have %s.", symbol);                 \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+    IMPORT(set_environment, "retro_set_environment");
+    IMPORT(set_video_refresh, "retro_set_video_refresh");
+    IMPORT(set_audio_sample, "retro_set_audio_sample");
+    IMPORT(set_audio_sample_batch, "retro_set_audio_sample_batch");
+    IMPORT(set_input_poll, "retro_set_input_poll");
+    IMPORT(set_input_state, "retro_set_input_state");
+    IMPORT(init, "retro_init");
+    IMPORT(deinit, "retro_deinit");
+    IMPORT(load_game, "retro_load_game");
+    IMPORT(unload_game, "retro_unload_game");
+    IMPORT(get_system_av_info, "retro_get_system_av_info");
+    IMPORT(set_controller_port_device, "retro_set_controller_port_device");
+    IMPORT(run, "retro_run");
+    IMPORT(reset, "retro_reset");
+    IMPORT(serialize_size, "retro_serialize_size");
+    IMPORT(serialize, "retro_serialize");
+    IMPORT(unserialize, "retro_unserialize");
+    IMPORT(get_memory_data, "retro_get_memory_data");
+    IMPORT(get_memory_size, "retro_get_memory_size");
+    IMPORT(cheat_reset, "retro_cheat_reset");
+    IMPORT(cheat_set, "retro_cheat_set");
+#undef IMPORT
+    core_loaded = true;
+    return true;
+}
 
 static const CoreApi *core = &SWANSTATION;
 
@@ -178,7 +197,7 @@ static void register_variables(const struct retro_variable *vars)
     for (; vars && vars->key; ++vars)
     {
         if (find_option(vars->key))
-            continue; /* keep SwanStationPS5's override */
+            continue; /* keep SwanStation's override */
         const char *semi = strchr(vars->value, ';');
         const char *start = semi ? semi + 1 : vars->value;
         while (*start == ' ')
@@ -964,7 +983,7 @@ static int16_t RETRO_CALLCONV input_state_cb(unsigned port, unsigned device, uns
         default: return 0;
         }
     case RETRO_DEVICE_LIGHTGUN:
-        /* the controller as a gun: aimed by SwanStationPS5 (controls.c), R2 fires,
+        /* the controller as a gun: aimed by SwanStation (controls.c), R2 fires,
          * L2 or Square reloads (a shot off the screen), Cross / Circle are A / B */
         switch (id)
         {
@@ -1185,6 +1204,8 @@ bool host_load(const char *game_path, const char *serial, const Paths *paths, co
     host_unload();
     host_paths = paths;
     str_copy(loading_path, sizeof(loading_path), game_path);
+    if (!core_load(error, error_size))
+        return false;
     core = &SWANSTATION;
     SwanStationPS5_log("host: emulator %s", core->name);
     card_prepare(serial ? serial : "", game_path);
@@ -1545,4 +1566,23 @@ bool host_disc_select(int index)
     if (ok)
         disc_remember();
     return ok;
+}
+
+/* ---------------------------------------------------------------- the game's serial */
+
+/* The core's own export (SSPS5.patch's retro_ds): the serial of a disc image, read the way the core reads it. Used by the
+ * library scan, which can run before any game has been loaded. */
+bool swanstation_retro_ds(const char *path, char *out, size_t size)
+{
+    char error[128];
+    if (!core_load(error, sizeof(error)))
+        return false;
+    static bool (*ds)(const char *, char *, size_t);
+    if (!ds)
+    {
+        HMODULE dll = GetModuleHandleW(L"swanstation_libretro.dll");
+        if (dll)
+            *(FARPROC *)&ds = GetProcAddress(dll, "retro_ds");
+    }
+    return ds && ds(path, out, size);
 }

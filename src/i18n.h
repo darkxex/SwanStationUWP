@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - interface languages.
+ * SwanStation - interface languages.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_I18N_H

@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the choices of the core's three BIOS options (NTSC-J, NTSC-U, PAL).
+ * SwanStation - the choices of the core's three BIOS options (NTSC-J, NTSC-U, PAL).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Their list is not the table's fixed four: it is Auto (the core picks the folder's BIOS for the region), the OpenBIOS

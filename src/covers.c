@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - cover art: local lookup, background download and decoding.
+ * SwanStation - cover art: local lookup, background download and decoding.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Lookup order for a game:
@@ -141,7 +141,7 @@ static uint8_t *title_card(const char *title, int *w, int *h)
             if (x < 6 || y < 6 || x >= *w - 6 || y >= *h - 6)
                 p[0] = 70, p[1] = 86, p[2] = 170; /* frame */
         }
-    text_render_rgba(px, *w, *h, 30, 30, FONT_BOLD, 0xff9fb4ffu, *w - 60, "SwanStationPS5");
+    text_render_rgba(px, *w, *h, 30, 30, FONT_BOLD, 0xff9fb4ffu, *w - 60, "SwanStation");
     text_render_rgba(px, *w, *h, 170, 46, FONT_BOLD, 0xffffffffu, *w - 70, title);
     return px;
 }

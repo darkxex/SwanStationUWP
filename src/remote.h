@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - settings from a phone: a small web page on the local network.
+ * SwanStation - settings from a phone: a small web page on the local network.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_REMOTE_H

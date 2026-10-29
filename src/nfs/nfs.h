@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - games on NFS servers (the frontend's side of src/nfs/nfs.cpp).
+ * SwanStation - games on NFS servers (the frontend's side of src/nfs/nfs.cpp).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The console's kernel has no NFS client, so the app is its own (libnfs, third_party/libnfs): a share is served

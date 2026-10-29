@@ -1,6 +1,6 @@
 /*
- * SwanStationPS5 - memory card manager: every game's card, the saves on it, export
- * for other emulators, import from /data/SwanStationPS5/import.
+ * SwanStation - memory card manager: every game's card, the saves on it, export
+ * for other emulators, import from LocalState/SwanStation/import.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The core keeps one card per game: <saves>/<serial>_1.mcd (raw, 128 KiB).
@@ -348,7 +348,7 @@ void memcards_screen(uint32_t pressed)
         shelf_backdrop();
     text_draw(TH_MARGIN, 40, 44, FONT_BOLD, TH_TEXT, ALIGN_LEFT, tr("Memory cards"));
     text_draw(TH_MARGIN + 2, 100, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_LEFT,
-              tr("One card per game. Import from /data/SwanStationPS5/import."));
+              tr("One card per game. Import from LocalState/SwanStation/import."));
 
     /* the cards, on the left */
     const int rows = 10;

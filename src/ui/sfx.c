@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - interface sounds, synthesised at start-up (no sample files).
+ * SwanStation - interface sounds, synthesised at start-up (no sample files).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Each sound is a short band-passed noise burst (the "tick") over a pitched

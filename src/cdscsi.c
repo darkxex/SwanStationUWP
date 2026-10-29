@@ -1,7 +1,7 @@
 /*
- * SwanStationPS5 - SCSI pass-through to a CD drive. See cdscsi.h.
+ * SwanStation - SCSI pass-through to a CD drive. See cdscsi.h.
  * The command counts as done only when the status is CAM_REQ_CMP and nothing is left untransferred (resid == 0):
- * on the USB path of the PS5 a drive has answered "complete" with 0 bytes (PS5SX2, review of its PR #34).
+ * on the USB path of the Xbox a drive has answered "complete" with 0 bytes (PS5SX2, review of its PR #34).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "cdscsi.h"

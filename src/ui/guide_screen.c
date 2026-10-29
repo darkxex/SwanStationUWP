@@ -1,10 +1,10 @@
 /*
- * SwanStationPS5 - text guides: walkthroughs and FAQs (.txt) you put beside a game,
- * read in the game from the SwanStationPS5 menu.
+ * SwanStation - text guides: walkthroughs and FAQs (.txt) you put beside a game,
+ * read in the game from the SwanStation menu.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Every .txt in the game's folder (but serial.txt) or in its guides/ folder
- * is a guide; a sandboxed SwanStationPS5 can't list folders, so it looks for guide.txt
+ * is a guide; a sandboxed SwanStation can't list folders, so it looks for guide.txt
  * and guide1.txt to guide9.txt. Text is shown in a monospace face so the ASCII
  * tables of GameFAQs-style guides line up, and the place you were reading is
  * kept per guide (<guide>.txt.pos beside it, or in the states folder).

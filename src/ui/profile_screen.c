@@ -1,9 +1,9 @@
 /*
- * SwanStationPS5 - your RetroAchievements profile: points, games mastered, what you
+ * SwanStation - your RetroAchievements profile: points, games mastered, what you
  * unlocked lately and the games closest to mastery.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * The points come from the server (sign-in); the rest from what SwanStationPS5 keeps:
+ * The points come from the server (sign-in); the rest from what SwanStation keeps:
  * stats.txt (each game's progress, saved when you quit it) and its log of
  * unlocks. The avatar is downloaded once to <root>/art/avatar-<user>.png.
  */
@@ -158,7 +158,7 @@ static void draw_header(void)
     snprintf(points, sizeof(points), tr("%u points (hardcore)   %u points (softcore)"), ra_user_hardcore_score(),
              ra_user_softcore_score());
     text_draw(tx, ay + 64, 24, FONT_REGULAR, TH_TEXT_DIM, ALIGN_LEFT,
-              ra_signed_in() ? points : tr("Not signed in yet: the points show once SwanStationPS5 is online"));
+              ra_signed_in() ? points : tr("Not signed in yet: the points show once SwanStation is online"));
 
     /* hardcore on or off, at the right */
     char mode[96];
@@ -197,7 +197,7 @@ static void draw_recent(float lx, float cy, float col)
     text_draw(lx + 28, cy + 22, 26, FONT_BOLD, TH_TEXT, ALIGN_LEFT, tr("Recently unlocked"));
     if (!P.recent_count)
         text_draw_fit(lx + 28, cy + 80, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_LEFT, col - 56,
-                      tr("Unlocks earned in SwanStationPS5 show here."));
+                      tr("Unlocks earned in SwanStation show here."));
     for (int i = 0; i < P.recent_count; ++i)
     {
         const RaRecent *r = &P.recent[i];

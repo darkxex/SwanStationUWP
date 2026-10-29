@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 v2 - the presenter's side of libretro's Vulkan interface (host.c).
+ * SwanStation v2 - the presenter's side of libretro's Vulkan interface (host.c).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_VK_PRESENT_HW_H

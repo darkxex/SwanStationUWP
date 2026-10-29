@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - xBR 2x (level 2) pixel-art scaler.
+ * SwanStation - xBR 2x (level 2) pixel-art scaler.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_XBR_H

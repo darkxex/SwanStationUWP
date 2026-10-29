@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - the game shelf (home screen).
+ * SwanStation - the game shelf (home screen).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Covers stand on a shelf: the selected one faces you, its neighbours turn
@@ -699,12 +699,12 @@ static void draw_details(const Game *g, float t)
             snprintf(ach, sizeof(ach), "%d / %d", st->ach_unlocked, st->ach_total);
     }
     snprintf(discs, sizeof(discs), "%d", g->discs);
-    /* where the game is read from: the games folder holding its own folder, e.g. /data/SwanStationPS5/games */
+    /* where the game is read from: the games folder holding its own folder, e.g. LocalState/SwanStation/games */
     char where[SwanStationPS5_PATH_MAX];
     str_copy(where, sizeof(where), g->folder);
     {
         char *last = strrchr(where, '/');
-        if (last && strcmp(last + 1, "games") != 0 && strcmp(last + 1, "SwanStationPS5") != 0 &&
+        if (last && strcmp(last + 1, "games") != 0 && strcmp(last + 1, "SwanStation") != 0 &&
             strcmp(last + 1, "PSXS5") != 0)
             *last = '\0'; /* a game's own folder: its parent is the games folder */
     }
@@ -970,7 +970,7 @@ static void storage_screen(uint32_t pressed)
     float w = 1200, h = 300, x = CENTER_X - w * 0.5f, y = 330;
     draw_rrect(x, y, w, h, TH_RADIUS, TH_CARD_SOFT);
     icon_draw(ICON_ALERT_TRIANGLE, CENTER_X - 32, y + 40, 64, TH_GOLD);
-    text_draw(CENTER_X, y + 124, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("SwanStationPS5 can't open /data/SwanStationPS5"));
+    text_draw(CENTER_X, y + 124, 36, FONT_BOLD, TH_TEXT, ALIGN_CENTER, tr("SwanStation can't open LocalState/SwanStation"));
     text_draw_fit(CENTER_X, y + 190, 24, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER, w - 80,
                   app.storage_error);
     static const int glyphs[] = {GLYPH_SQUARE};
@@ -1053,7 +1053,7 @@ static void picker_open(int game)
     P.preview_for = -1;
     P.files[0][0] = '\0';
     pick_scan(app.library.games[game].folder);
-    /* the covers SwanStationPS5 downloaded for it (flat, 3D, by name) */
+    /* the covers SwanStation downloaded for it (flat, 3D, by name) */
     const char *serial = app.library.games[game].serial;
     for (int k = 0; k < 3 && P.count < PICK_MAX; ++k)
     {
@@ -1090,7 +1090,7 @@ static void picker_choose(void)
     char dir[SwanStationPS5_PATH_MAX], path[SwanStationPS5_PATH_MAX], name[96];
     covers_custom_dir(dir, sizeof(dir));
     static const char *const exts[] = {"png", "jpg", "jpeg"};
-    for (int i = 0; i < 3; ++i) /* only the copies SwanStationPS5 made itself */
+    for (int i = 0; i < 3; ++i) /* only the copies SwanStation made itself */
     {
         snprintf(name, sizeof(name), "%s.%s", g->id, exts[i]);
         path_join(path, sizeof(path), dir, name);
@@ -1182,7 +1182,7 @@ static void picker_draw(void)
     if (P.count == 1)
         text_draw_fit(lx, ly + rh * 1.5f, 22, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, t), ALIGN_LEFT, lw,
                       tr(P.unlisted ? "Can't list the covers folder: unlock /data in Settings, System"
-                                    : "No images yet: put .png or .jpg files in /data/SwanStationPS5/covers/"));
+                                    : "No images yet: put .png or .jpg files in LocalState/SwanStation/covers/"));
 
     /* the preview, decoded once per selected file */
     const float px = x + 860, py = y + 130, pw = 500, ph = 560;
@@ -1213,7 +1213,7 @@ static void picker_draw(void)
         text_draw(px + pw * 0.5f, py + ph * 0.5f - 12, 22, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, t),
                   ALIGN_CENTER, tr("Can't read this image"));
     text_draw_fit(x + 40, y + h - 56, 20, FONT_REGULAR, argb_alpha(TH_TEXT_DIM, t), ALIGN_LEFT, w - 80,
-                  tr("Images from /data/SwanStationPS5/covers/ and the game's folder. Named like the game, they are used without picking."));
+                  tr("Images from LocalState/SwanStation/covers/ and the game's folder. Named like the game, they are used without picking."));
 }
 
 /* ---------------------------------------------------------------- grid layout */
@@ -2174,7 +2174,7 @@ void shelf_screen(uint32_t pressed)
         snprintf(line, sizeof(line), tr("Games: %s/<Game name>/"), app.paths.games);
         text_draw(CENTER_X, y + 156, 24, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, line);
         text_draw(CENTER_X, y + 190, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                  tr("Also: /data/PSXS5/games/ and SwanStationPS5 or PSXS5 folders in /mnt/usb0, /mnt/ext1"));
+                  tr("Also: /data/PSXS5/games/ and SwanStation or PSXS5 folders in /mnt/usb0, /mnt/ext1"));
         snprintf(line, sizeof(line), tr("BIOS (optional): %s/"), app.paths.bios);
         if (strcmp(app.paths.bios, "/data/PSXS5/bios") != 0)
             strncat(line, " | /data/PSXS5/bios/", sizeof(line) - strlen(line) - 1);
@@ -2183,13 +2183,13 @@ void shelf_screen(uint32_t pressed)
         {
             /* games copied another way can't be found without listing /data */
             text_draw(CENTER_X, y + 262, 22, FONT_REGULAR, TH_GOLD, ALIGN_CENTER,
-                      tr("Nothing unlocked /data (LegacyJB, etaHEN...), so SwanStationPS5 can't look into the games folder."));
+                      tr("Nothing unlocked /data (LegacyJB, etaHEN...), so SwanStation can't look into the games folder."));
             text_draw(CENTER_X, y + 294, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                      tr("On your PC:  python tools/SwanStationPS5_sync.py index --host <PS5 IP>"));
+                      tr("On your PC:  python tools/SwanStationPS5_sync.py index --host <Xbox IP>"));
         }
         else
             text_draw(CENTER_X, y + 274, 22, FONT_REGULAR, TH_TEXT_DIM, ALIGN_CENTER,
-                      tr("On your PC:  python tools/SwanStationPS5_sync.py upload --host <PS5 IP>"));
+                      tr("On your PC:  python tools/SwanStationPS5_sync.py upload --host <Xbox IP>"));
         /* and the other way, last: your own discs */
         const float tip_y = y + (app.sandboxed ? 330 : 310);
         text_draw_fit(CENTER_X, tip_y, 28, FONT_REGULAR, TH_TEXT, ALIGN_CENTER, w - 80, tip1);

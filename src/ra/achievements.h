@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - RetroAchievements (retroachievements.org) through rcheevos.
+ * SwanStation - RetroAchievements (retroachievements.org) through rcheevos.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_ACHIEVEMENTS_H
@@ -37,7 +37,7 @@ typedef struct
 } RaAchievement;
 /* The loaded game's achievements, unlocked ones first. Returns how many. */
 int ra_list(RaAchievement *out, int max);
-/* The unlocks SwanStationPS5 has seen (its own log), newest first; max <= 64. */
+/* The unlocks SwanStation has seen (its own log), newest first; max <= 64. */
 typedef struct
 {
     long long when;

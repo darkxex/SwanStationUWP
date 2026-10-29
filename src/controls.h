@@ -1,7 +1,7 @@
 /*
- * SwanStationPS5 - what SwanStationPS5 does with the controller while a game runs: stick dead
+ * SwanStation - what SwanStation does with the controller while a game runs: stick dead
  * zone and response, gas and brake on the triggers in racing games, the
- * DualSense as a light gun, and the adaptive triggers.
+ * Xbox controller as a light gun, and the adaptive triggers.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #ifndef SwanStationPS5_CONTROLS_H
@@ -23,7 +23,7 @@ int controls_kind(const Game *g);
 /* The light gun a game gets with these settings: 0 none, 1 GunCon, 2 Justifier. */
 int controls_gun_for(const Game *g, const Settings *s);
 /* Other controllers: 0 pads, 1 NeGcon (racing games that take one), 2 the
- * touchpad as a mouse (mouse games); from DuckStation's database. */
+ * View button as a mouse (mouse games); from DuckStation's database. */
 int controls_special_for(const Game *g, const Settings *s);
 /* Before the game loads, and when it stops (the triggers go back to normal). */
 void controls_start(const Game *g, const Settings *s);

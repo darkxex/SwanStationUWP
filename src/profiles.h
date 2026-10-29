@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - profiles: each person's memory cards, states, settings, play time
+ * SwanStation - profiles: each person's memory cards, states, settings, play time
  * and RetroAchievements sign-in. Profile 0 is the main one (the data root).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

@@ -1,5 +1,5 @@
 /*
- * SwanStationPS5 - interface icons: a Tabler Icons subset (MIT), drawn like text.
+ * SwanStation - interface icons: a Tabler Icons subset (MIT), drawn like text.
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * assets/fonts/tabler-SwanStationPS5.ttf holds only the icons in icons_list.h (made by
