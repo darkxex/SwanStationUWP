@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in SwanStationPS5 doesn't work as it should
+description: Something in SwanStationUWP doesn't work as it should
 labels: [bug]
 body:
   - type: markdown
@@ -21,10 +21,10 @@ body:
     id: steps
     attributes:
       label: How to make it happen
-      description: The steps from starting SwanStationPS5. Does it happen every time?
+      description: The steps from starting SwanStationUWP. Does it happen every time?
       placeholder: |
         1. Start Toy Story 2
-        2. Walk up to Mr. Potato Head and press X
+        2. Walk up to Mr. Potato Head and press A
         3. A gray box appears (every time)
     validations:
       required: true
@@ -33,7 +33,7 @@ body:
     id: game
     attributes:
       label: Game and serial
-      description: Only if it's about a game. The serial is on the shelf under the title (Triangle shows details).
+      description: Only if it's about a game. The serial is on the shelf under the title (Y shows details).
       placeholder: Toy Story 2 (SLUS-00893)
 
   - type: dropdown
@@ -44,9 +44,9 @@ body:
         - A game looks wrong (graphics)
         - A game sounds wrong
         - A game crashes, freezes or won't start
-        - SwanStationPS5 crashes or closes
-        - The PS5 crashes or freezes
-        - Storage / "can't open /data/SwanStationPS5"
+        - SwanStationUWP crashes or closes
+        - The console or PC crashes or freezes
+        - Storage / drives / "my games or BIOS don't show"
         - Controls or button mapping
         - Menus, shelf or settings
         - Covers, cheats or memory cards
@@ -58,18 +58,18 @@ body:
   - type: input
     id: version
     attributes:
-      label: SwanStationPS5 version
+      label: SwanStationUWP version
       description: Settings → About → Version
-      placeholder: 1.2.0
+      placeholder: 1.0.0
     validations:
       required: true
 
   - type: input
     id: setup
     attributes:
-      label: PS5 and jailbreak
-      description: Model, firmware, and what you load (and in what order).
-      placeholder: PS5 slim, 13.60, etaHEN 2.x + kstuff, ShadowMountPlus
+      label: Console or PC
+      description: Xbox Series X or S (and its OS version), or the PC (Windows version and graphics card). How you installed the app.
+      placeholder: Xbox Series X, installed with deploy-xbox.ps1
     validations:
       required: true
 
@@ -85,8 +85,8 @@ body:
     attributes:
       label: Log
       description: |
-        Attach `/data/SwanStationPS5/logs/SwanStationPS5.log`. Copy it with FTP **right after** the problem,
-        before starting SwanStationPS5 again (each start replaces it). After a crash it ends with a
+        Attach `LocalState\SwanStation\logs\SwanStationPS5.log` (the Device Portal's file explorer shows it on a console). Copy it
+        **right after** the problem, before starting SwanStationUWP again (each start keeps only the previous log). After a crash it ends with a
         `crash:` section; that's the most useful part.
       placeholder: Drag the SwanStationPS5.log file here.
     validations:

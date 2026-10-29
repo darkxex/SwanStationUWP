@@ -28,7 +28,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: SwanStationPS5 version
+      label: SwanStationUWP version
       placeholder: 1.2.0
     validations:
       required: true
