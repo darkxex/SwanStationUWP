@@ -14,10 +14,8 @@
 
 #include "libretro.h"
 #include "../platform/platform.h"
-#if defined(SwanStationPS5_VULKAN)
-#include "../platform/vk/vk_present.h"
-#include "../platform/vk/vk_present_hw.h" /* before libretro_vulkan.h: no prototypes */
-#include "libretro_vulkan.h"
+#if defined(SwanStationPS5_GPU)
+#include "../platform/uwp/dx_present.h"
 #endif
 #include "../platform/crash.h"
 
@@ -212,8 +210,8 @@ static void register_variables(const struct retro_variable *vars)
     }
 }
 
-#if defined(SwanStationPS5_VULKAN)
-/* SwanStation (DuckStation): the Vulkan renderer, the recompiler with LUT
+#if defined(SwanStationPS5_GPU)
+/* SwanStation (DuckStation): the Direct3D 11 renderer, the recompiler with LUT
  * fastmem (MMap does not survive a title's sandbox). */
 static const char *region_override;
 
@@ -309,7 +307,7 @@ static void apply_swanstation_options(const Settings *s)
     int cd = s->cd_speed >= 1 && s->cd_speed <= 10 && !(game_fixes & GDB_NO_CD_SPEEDUP) ? s->cd_speed : 1;
     snprintf(cd_speed, sizeof(cd_speed), "%d", cd);
     bool pgxp = s->pgxp && !(game_fixes & GDB_NO_PGXP);
-    set_option("swanstation_GPU_Renderer", session_renderer == 1 ? "Software" : "Vulkan");
+    set_option("swanstation_GPU_Renderer", session_renderer == 1 ? "Software" : "D3D11");
     set_option("swanstation_GPU_ResolutionScale", scale);
     set_option("swanstation_Console_Region", region_override ? region_override : regions[s->region % REGION_COUNT]);
     set_option("swanstation_GPU_TrueColor", s->true_colour ? "true" : "false");
@@ -367,7 +365,7 @@ static void apply_swanstation_options(const Settings *s)
 
 static void apply_settings_to_options(const Settings *s)
 {
-#if defined(SwanStationPS5_VULKAN)
+#if defined(SwanStationPS5_GPU)
     if (core == &SWANSTATION)
     {
         apply_swanstation_options(s);
@@ -376,115 +374,36 @@ static void apply_settings_to_options(const Settings *s)
 #endif
 }
 
-/* ---------------------------------------------------------------- Vulkan rendering */
+/* ---------------------------------------------------------------- Direct3D 11 rendering */
 
-#if defined(SwanStationPS5_VULKAN)
-/* SwanStation renders through Vulkan: it asks for a Vulkan context
- * (SET_HW_RENDER), creates the device itself through the negotiation
- * interface, and hands over a finished image each frame (set_image). The
- * screen (vk_present.c) moves onto that device and draws the image. */
+#if defined(SwanStationPS5_GPU)
+/* SwanStation renders through Direct3D 11: it asks for a D3D11 context (SET_HW_RENDER) and takes the device and the
+ * immediate context from the interface it gets (dx_present.cpp: the same device draws the screen). Each frame it leaves
+ * the finished picture bound to the pixel shader's slot 0 and calls video_refresh; video_cb keeps that view. */
 static struct retro_hw_render_callback hw;
 static bool hw_requested, hw_running;
-static const struct retro_hw_render_context_negotiation_interface_vulkan *negotiation;
-static struct retro_hw_render_interface_vulkan hw_interface;
 
-static void hw_set_image(void *handle, const struct retro_vulkan_image *image, uint32_t num_semaphores,
-                         const VkSemaphore *semaphores, uint32_t src_queue_family)
-{
-    (void)handle, (void)num_semaphores, (void)semaphores, (void)src_queue_family;
-    vkp_set_game_image(image ? image->create_info.image : VK_NULL_HANDLE, image ? image->image_view : VK_NULL_HANDLE,
-                       image ? image->image_layout : VK_IMAGE_LAYOUT_UNDEFINED);
-}
-static uint32_t hw_get_sync_index(void *handle)
-{
-    (void)handle;
-    return vkp_sync_index();
-}
-static uint32_t hw_get_sync_index_mask(void *handle)
-{
-    (void)handle;
-    return vkp_sync_index_mask();
-}
-static void hw_wait_sync_index(void *handle)
-{
-    (void)handle;
-    vkp_wait_sync_index();
-}
-static void hw_set_command_buffers(void *handle, uint32_t num, const VkCommandBuffer *cmd)
-{
-    (void)handle, (void)num, (void)cmd; /* the core submits its own */
-}
-static void hw_queue_noop(void *handle)
-{
-    (void)handle; /* one thread submits: no lock needed */
-}
-static void hw_set_signal_semaphore(void *handle, VkSemaphore semaphore)
-{
-    (void)handle, (void)semaphore;
-}
-
-/* After retro_load_game: the core's device, the screen moved onto it, then
- * context_reset builds the renderer. */
 static bool hw_start(char *error, size_t size)
 {
-    VkInstance instance;
-    VkPhysicalDevice gpu;
-    VkSurfaceKHR surface;
-    PFN_vkGetInstanceProcAddr gipa;
-    vkp_hw_context(&instance, &gpu, &surface, &gipa);
-    struct retro_vulkan_context context;
-    memset(&context, 0, sizeof(context));
-    const char *extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-    if (!negotiation || !negotiation->create_device ||
-        !negotiation->create_device(&context, instance, gpu, surface, gipa, extensions, 1, NULL, 0, NULL))
+    if (!dxp_core_interface())
     {
-        snprintf(error, size, "The core could not create its Vulkan device.");
+        snprintf(error, size, "The screen has no Direct3D 11 device for the core.");
         return false;
     }
-    char why[160];
-    if (!vkp_adopt_device(context.device, context.queue, context.queue_family_index, why, sizeof(why)))
-    {
-        snprintf(error, size, "The screen could not move to the core's device: %s", why);
-        return false;
-    }
-    VkDevice device;
-    VkQueue queue;
-    uint32_t family;
-    PFN_vkGetDeviceProcAddr gdpa;
-    vkp_hw_device(&device, &queue, &family, &gdpa);
-    memset(&hw_interface, 0, sizeof(hw_interface));
-    hw_interface.interface_type = RETRO_HW_RENDER_INTERFACE_VULKAN;
-    hw_interface.interface_version = RETRO_HW_RENDER_INTERFACE_VULKAN_VERSION;
-    hw_interface.instance = instance;
-    hw_interface.gpu = context.gpu ? context.gpu : gpu;
-    hw_interface.device = device;
-    hw_interface.get_device_proc_addr = gdpa;
-    hw_interface.get_instance_proc_addr = gipa;
-    hw_interface.queue = queue;
-    hw_interface.queue_index = family;
-    hw_interface.set_image = hw_set_image;
-    hw_interface.get_sync_index = hw_get_sync_index;
-    hw_interface.get_sync_index_mask = hw_get_sync_index_mask;
-    hw_interface.set_command_buffers = hw_set_command_buffers;
-    hw_interface.wait_sync_index = hw_wait_sync_index;
-    hw_interface.lock_queue = hw_queue_noop;
-    hw_interface.unlock_queue = hw_queue_noop;
-    hw_interface.set_signal_semaphore = hw_set_signal_semaphore;
     hw_running = true;
     if (hw.context_reset)
         hw.context_reset();
-    SwanStationPS5_log("host: the core renders through Vulkan");
+    SwanStationPS5_log("host: the core renders through Direct3D 11");
     return true;
 }
 
-/* The core asked for new geometry (internal resolution...): a new device
- * and renderer, between frames. */
+/* The core asked for new geometry (internal resolution...): a new renderer, between frames. */
 static void hw_restart(void)
 {
     if (hw.context_destroy)
         hw.context_destroy();
     hw_running = false;
-    vkp_set_game_image(VK_NULL_HANDLE, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED);
+    dxp_drop_core_frame();
     char error[200];
     if (!hw_start(error, sizeof(error)))
         SwanStationPS5_log("host: could not rebuild the core's renderer: %s", error);
@@ -499,8 +418,7 @@ static void hw_stop(void)
         hw.context_destroy();
     hw_running = false;
     hw_requested = false;
-    negotiation = NULL;
-    vkp_set_game_image(VK_NULL_HANDLE, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED);
+    dxp_drop_core_frame();
 }
 #endif
 
@@ -766,8 +684,8 @@ static bool RETRO_CALLCONV environment(unsigned cmd, void *data)
     case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO:
     {
         const struct retro_system_av_info *next = data;
-#if defined(SwanStationPS5_VULKAN)
-        /* The core's Vulkan renderer reads its internal resolution only when
+#if defined(SwanStationPS5_GPU)
+        /* The core's renderer reads its internal resolution only when
          * it is rebuilt: like RetroArch, rebuild the context right away. Not
          * for a timing change alone (each switch between interlaced and
          * progressive video, as from the white Sony screen to the PlayStation
@@ -838,39 +756,23 @@ static bool RETRO_CALLCONV environment(unsigned cmd, void *data)
         }
         return true;
     }
-#if defined(SwanStationPS5_VULKAN)
+#if defined(SwanStationPS5_GPU)
     case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
-        *(unsigned *)data = RETRO_HW_CONTEXT_VULKAN;
-        return vkp_describe()[0] != '\0';
+        *(unsigned *)data = RETRO_HW_CONTEXT_D3D11;
+        return dxp_describe()[0] != '\0';
     case RETRO_ENVIRONMENT_SET_HW_RENDER:
     {
         struct retro_hw_render_callback *cb = data;
-        if (core != &SWANSTATION || cb->context_type != RETRO_HW_CONTEXT_VULKAN || !vkp_describe()[0])
+        if (core != &SWANSTATION || cb->context_type != RETRO_HW_CONTEXT_D3D11 || !dxp_describe()[0])
             return false;
         hw = *cb;
         hw_requested = true;
         return true;
     }
-    case RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE:
-    {
-        const struct retro_hw_render_context_negotiation_interface *i = data;
-        if (i->interface_type != RETRO_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_VULKAN)
-            return false;
-        negotiation = data;
-        return true;
-    }
-    case RETRO_ENVIRONMENT_GET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_SUPPORT:
-    {
-        struct retro_hw_render_context_negotiation_interface *i = data;
-        if (i->interface_type != RETRO_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE_VULKAN)
-            return false;
-        i->interface_version = 1; /* create_device, not create_device2 */
-        return true;
-    }
     case RETRO_ENVIRONMENT_GET_HW_RENDER_INTERFACE:
-        if (!hw_running)
+        if (!hw_running || !dxp_core_interface())
             return false;
-        *(const struct retro_hw_render_interface **)data = (const struct retro_hw_render_interface *)&hw_interface;
+        *(const struct retro_hw_render_interface **)data = (const struct retro_hw_render_interface *)dxp_core_interface();
         return true;
 #endif
     case RETRO_ENVIRONMENT_SET_MESSAGE_EXT:
@@ -891,8 +793,8 @@ static void RETRO_CALLCONV video_cb(const void *data, unsigned width, unsigned h
     {
         /* duplicate frame: keep showing the previous one. SwanStation says so when the picture it shows is the one of
          * the last frame (a 30 fps game on a 60 fps core): frame interpolation takes only the game's own frames. */
-#if defined(SwanStationPS5_VULKAN)
-        vkp_frame_repeated();
+#if defined(SwanStationPS5_GPU)
+        dxp_frame_repeated();
 #endif
         ++frames_repeated;
         return;
@@ -900,7 +802,10 @@ static void RETRO_CALLCONV video_cb(const void *data, unsigned width, unsigned h
     ++frames_new;
     if (data == RETRO_HW_FRAME_BUFFER_VALID)
     {
-        /* rendered on the GPU: the image went through set_image */
+        /* rendered on the GPU: the picture is the view left bound to the pixel shader's slot 0 */
+#if defined(SwanStationPS5_GPU)
+        dxp_take_core_frame(width, height);
+#endif
         frame_data = NULL;
         frame_w = width;
         frame_h = height;
@@ -1229,7 +1134,7 @@ bool host_load(const char *game_path, const char *serial, const Paths *paths, co
         core->deinit();
         return false;
     }
-#if defined(SwanStationPS5_VULKAN)
+#if defined(SwanStationPS5_GPU)
     if (hw_requested && !hw_start(error, error_size))
     {
         SwanStationPS5_log("%s", error);
@@ -1260,7 +1165,7 @@ void host_unload(void)
     card_flush();
     disc_remember();
     core->unload_game();
-#if defined(SwanStationPS5_VULKAN)
+#if defined(SwanStationPS5_GPU)
     hw_stop();
 #endif
     core->deinit();
@@ -1448,9 +1353,9 @@ bool host_unserialize(const void *buffer, size_t size)
 
 bool host_capture(uint8_t *rgba, int w, int h)
 {
-#if defined(SwanStationPS5_VULKAN)
+#if defined(SwanStationPS5_GPU)
     if (loaded && hw_running && !frame_data && frame_w && frame_h) /* rendered on the GPU */
-        return vkp_capture_game(rgba, w, h, (int)frame_w, (int)frame_h);
+        return dxp_capture_game(rgba, w, h, (int)frame_w, (int)frame_h);
 #endif
     if (!loaded || !frame_data || frame_w == 0 || frame_h == 0)
         return false;

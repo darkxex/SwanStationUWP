@@ -2,9 +2,9 @@
  * SwanStationUWP - platform layer for Xbox Series X|S (UWP, developer mode).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * The same interface platform.h gave the PS5 and desktop builds, on what UWP offers: the screen through Vulkan (Mesa's
- * Dozen on Direct3D 12, vk_present.c), Xbox controllers through XInput, sound through XAudio2.
- * The interface is always drawn by the GPU (vk_ui.inc); there is no CPU canvas.
+ * The same interface platform.h gave the PS5 and desktop builds, on what UWP offers: the screen through Direct3D 11
+ * (dx_present.cpp), Xbox controllers through XInput, sound through XAudio2.
+ * The interface is always drawn by the GPU (dx_present.cpp); there is no CPU canvas.
  */
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -27,7 +27,7 @@ extern "C"
 {
 #include "../platform.h"
 #include "../../i18n.h"
-#include "../vk/vk_present.h"
+#include "dx_present.h"
 }
 #include "uwp_app.h"
 
@@ -36,7 +36,7 @@ extern "C"
 #define SCREEN_H 1080
 
 static char init_error[256];
-static char screen_info[400] = "Vulkan (Dozen)";
+static char screen_info[400] = "Direct3D 11";
 static bool gpu_ui;
 static int output_wanted; /* 0 1080p, 1 1440p, 2 4K */
 static bool backdrop_dirty;
@@ -48,9 +48,9 @@ extern "C" const char *plat_screen_info(void) { return screen_info; }
 static void gpu_quad(int tex, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1,
                      uint32_t argb)
 {
-    const VkpUiVertex v[6] = {{x0, y0, u0, v0, argb}, {x1, y0, u1, v0, argb}, {x1, y1, u1, v1, argb},
+    const DxpUiVertex v[6] = {{x0, y0, u0, v0, argb}, {x1, y0, u1, v0, argb}, {x1, y1, u1, v1, argb},
                               {x0, y0, u0, v0, argb}, {x1, y1, u1, v1, argb}, {x0, y1, u0, v1, argb}};
-    vkp_ui_draw(tex, v, 6);
+    dxp_ui_draw(tex, v, 6);
 }
 
 /* ---------------------------------------------------------------- start and stop */
@@ -60,18 +60,32 @@ extern "C" bool plat_init(void)
     char error[160];
     static const int OUTPUT_W[] = {1920, 2560, 3840}, OUTPUT_H[] = {1080, 1440, 2160};
     const int output = output_wanted > 0 && output_wanted < 3 ? output_wanted : 0;
-    vkp_want_size(OUTPUT_W[output], OUTPUT_H[output]);
+    dxp_want_size(OUTPUT_W[output], OUTPUT_H[output]);
+    // The window of a UWP app on the console is 1080p until the app asks for the TV's mode: the swap chain follows the
+    // window, so the mode is asked for first (a TV without it stays as it is; a PC has no mode to ask for)
+    {
+        int mode_w = 0, mode_h = 0;
+        double mode_hz = 0;
+        if (uwp_current_display_mode(&mode_w, &mode_h, &mode_hz) && (mode_w != OUTPUT_W[output] || mode_h != OUTPUT_H[output]))
+        {
+            if (uwp_request_display_mode(OUTPUT_W[output], OUTPUT_H[output], mode_hz > 0 ? mode_hz : 60.0))
+                SwanStationPS5_log("screen: the TV is now at %dx%d", OUTPUT_W[output], OUTPUT_H[output]);
+            else
+                SwanStationPS5_log("screen: the TV has no %dx%d mode at %.0f Hz: staying at %dx%d", OUTPUT_W[output],
+                                   OUTPUT_H[output], mode_hz, mode_w, mode_h);
+        }
+    }
     int win_w = 0, win_h = 0;
     if (uwp_window_pixels(&win_w, &win_h))
-        vkp_want_extent(win_w, win_h);
-    if (!vkp_open(SCREEN_W, SCREEN_H, error, sizeof(error)))
+        dxp_want_extent(win_w, win_h);
+    if (!dxp_open(SCREEN_W, SCREEN_H, error, sizeof(error)))
     {
         snprintf(init_error, sizeof(init_error), "screen: %s", error);
         SwanStationPS5_log("%s", init_error);
         return false;
     }
-    snprintf(screen_info, sizeof(screen_info), "Vulkan (Dozen), %s", vkp_describe());
-    if (!vkp_ui_open(error, sizeof(error)))
+    snprintf(screen_info, sizeof(screen_info), "Direct3D 11, %s", dxp_describe());
+    if (!dxp_ui_open(error, sizeof(error)))
     {
         snprintf(init_error, sizeof(init_error), "screen: the interface needs the GPU: %s", error);
         SwanStationPS5_log("%s", init_error);
@@ -86,7 +100,7 @@ extern "C" void plat_release(void) {}
 extern "C" void plat_shutdown(void)
 {
     plat_audio_close();
-    vkp_close();
+    dxp_close();
     gpu_ui = false;
 }
 
@@ -170,7 +184,7 @@ extern "C" void plat_poll(PadState pads[SwanStationPS5_MAX_PADS], bool *quit)
         if (uwp_window_pixels(&w, &h))
         {
             char error[160];
-            if (!vkp_resize(w, h, error, sizeof(error)))
+            if (!dxp_resize(w, h, error, sizeof(error)))
                 SwanStationPS5_log("screen: %s", error);
         }
     }
@@ -435,7 +449,7 @@ extern "C" void plat_audio_clear(void)
 extern "C" int plat_width(void) { return SCREEN_W; }
 extern "C" int plat_height(void) { return SCREEN_H; }
 
-extern "C" void plat_begin_frame(uint32_t clear_argb) { vkp_ui_begin(clear_argb); }
+extern "C" void plat_begin_frame(uint32_t clear_argb) { dxp_ui_begin(clear_argb); }
 
 static float colour_k[3] = {1.0f, 1.0f, 0.0f}; /* brightness, saturation, warmth */
 
@@ -454,16 +468,16 @@ extern "C" void plat_set_colour(int brightness, int colour, int sharpen)
     colour_k[1] = sat[colour >= 0 && colour < 6 ? colour : 0];
     colour_k[2] = warm[colour >= 0 && colour < 6 ? colour : 0];
     static const float sharp[] = {0.0f, 0.45f, 1.0f};
-    vkp_set_colour(colour_k[0], colour_k[1], colour_k[2], sharp[sharpen >= 0 && sharpen < 3 ? sharpen : 0]);
+    dxp_set_colour(colour_k[0], colour_k[1], colour_k[2], sharp[sharpen >= 0 && sharpen < 3 ? sharpen : 0]);
 }
 
-extern "C" void plat_set_fsr(bool on) { vkp_set_fsr(on); }
-extern "C" double plat_display_hz(void) { return vkp_display_hz(); }
-extern "C" double plat_framegen_hz(void) { return vkp_framegen_hz(); }
-extern "C" int plat_framegen_times(void) { return vkp_framegen_times(); }
+extern "C" void plat_set_fsr(bool on) { dxp_set_fsr(on); }
+extern "C" double plat_display_hz(void) { return dxp_display_hz(); }
+extern "C" double plat_framegen_hz(void) { return dxp_framegen_hz(); }
+extern "C" int plat_framegen_times(void) { return dxp_framegen_times(); }
 extern "C" void plat_set_framegen(int generated, double core_hz, double speed, bool nominal)
 {
-    vkp_set_framegen(generated, core_hz, speed, nominal);
+    dxp_set_framegen(generated, core_hz, speed, nominal);
 }
 extern "C" void plat_want_output(int resolution) { output_wanted = resolution; }
 extern "C" bool plat_open_file_access_settings(void) { return uwp_open_file_access_settings(); }
@@ -480,7 +494,7 @@ extern "C" bool plat_set_output(int resolution)
     if (uwp_current_display_mode(&w, &h, &hz) && (w != OUTPUT_W[resolution] || h != OUTPUT_H[resolution]))
         uwp_request_display_mode(OUTPUT_W[resolution], OUTPUT_H[resolution], hz > 0 ? hz : 60.0);
     char error[160];
-    if (vkp_set_mode(OUTPUT_W[resolution], OUTPUT_H[resolution], error, sizeof(error)))
+    if (dxp_set_mode(OUTPUT_W[resolution], OUTPUT_H[resolution], error, sizeof(error)))
         return true;
     SwanStationPS5_log("screen: %dx%d failed: %s", OUTPUT_W[resolution], OUTPUT_H[resolution], error);
     return false;
@@ -488,7 +502,7 @@ extern "C" bool plat_set_output(int resolution)
 
 extern "C" void plat_want_high_refresh(bool on)
 {
-    vkp_want_high_refresh(on);
+    dxp_want_high_refresh(on);
     int w = 0, h = 0;
     double hz = 0;
     if (!uwp_current_display_mode(&w, &h, &hz))
@@ -501,7 +515,7 @@ extern "C" void plat_want_high_refresh(bool on)
 
 /* ---------------------------------------------------------------- game picture */
 
-static bool game_gpu; /* the core renders through Vulkan: the screen draws its image */
+static bool game_gpu; /* the core renders through Direct3D 11: the screen draws its image */
 static int game_src_w = 320, game_src_h = 240;
 static int soft_tex = -1, soft_w, soft_h;
 static bool soft_smooth;
@@ -529,12 +543,12 @@ extern "C" void plat_upload_game(const void *pixels, int width, int height, size
     if (soft_tex < 0 || soft_w != width || soft_h != height)
     {
         if (soft_tex >= 0)
-            vkp_ui_texture_free(soft_tex);
+            dxp_ui_texture_free(soft_tex);
         free(soft_rgba);
         soft_rgba = (uint8_t *)calloc((size_t)width * height, 4);
         soft_tex = -1;
         if (soft_rgba)
-            soft_tex = vkp_ui_texture_create(soft_rgba, width, height, true, false, true);
+            soft_tex = dxp_ui_texture_create(soft_rgba, width, height, true, false, true);
         soft_w = width;
         soft_h = height;
     }
@@ -564,7 +578,7 @@ extern "C" void plat_upload_game(const void *pixels, int width, int height, size
             dst[3] = 255;
         }
     }
-    vkp_ui_texture_update(soft_tex, soft_rgba);
+    dxp_ui_texture_update(soft_tex, soft_rgba);
 }
 
 extern "C" void plat_game_rect(int *x, int *y, int *w, int *h)
@@ -583,7 +597,7 @@ extern "C" void plat_fill_rect(int x, int y, int w, int h, uint32_t argb)
 
 extern "C" void plat_draw_game(const Settings *settings, float display_aspect, uint8_t dim)
 {
-    const bool hw = game_gpu && vkp_game_image_ready();
+    const bool hw = game_gpu && dxp_game_image_ready();
     if (!hw && (game_gpu || soft_tex < 0))
         return;
     /* Scanlines the game actually has: interlaced (480) and 2x-internal frames show at the same size as 240-line ones. */
@@ -651,7 +665,7 @@ extern "C" void plat_draw_game(const Settings *settings, float display_aspect, u
             }
         return;
     }
-    vkp_ui_game_here(); /* the picture goes in the list here: the border drawn before is under it, the dimming over it */
+    dxp_ui_game_here(); /* the picture goes in the list here: the border drawn before is under it, the dimming over it */
     // The CPU canvas of the PS5 build is gone: the dimming for menus and the scanlines are black rows over the picture
     if (scan && lines > 0)
         for (int y = 0; y < dh; ++y)
@@ -669,8 +683,8 @@ extern "C" void plat_draw_game(const Settings *settings, float display_aspect, u
     if (!shader && settings->supersampling && (game_src_w > dw || game_src_h > dh))
         shader = 99;
     /* "Smooth final scaling" off: sharp pixels (the shaders need the bilinear sampler) */
-    vkp_set_game_nearest(!settings->smooth && !shader);
-    vkp_show_game((float)dx, (float)dy, (float)dw, (float)dh, crop, shader, game_src_w, game_src_h, lines);
+    dxp_set_game_nearest(!settings->smooth && !shader);
+    dxp_show_game((float)dx, (float)dy, (float)dw, (float)dh, crop, shader, game_src_w, game_src_h, lines);
 }
 
 extern "C" void plat_backdrop_changed(void) { backdrop_dirty = true; }
@@ -683,14 +697,14 @@ extern "C" void plat_draw_backdrop(const uint8_t *grey, int w, int h, uint32_t t
     if (tex < 0 || backdrop_dirty || shown != grey || shown_w != w || shown_h != h)
     {
         if (tex >= 0)
-            vkp_ui_texture_free(tex);
+            dxp_ui_texture_free(tex);
         uint8_t *px = (uint8_t *)malloc((size_t)w * h * 4);
         tex = -1;
         if (px)
         {
             for (size_t i = 0; i < (size_t)w * h; ++i)
                 px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = grey[i], px[i * 4 + 3] = 255;
-            tex = vkp_ui_texture_create(px, w, h, true, false, true);
+            tex = dxp_ui_texture_create(px, w, h, true, false, true);
             free(px);
         }
         shown = grey;
@@ -706,7 +720,7 @@ extern "C" void plat_profile(const char *) {}
 
 extern "C" void plat_end_frame(void)
 {
-    vkp_present_ui(); /* the interface's list over the game; waits for the TV's refresh */
+    dxp_present_ui(); /* the interface's list over the game; waits for the TV's refresh */
 }
 
 /* ---------------------------------------------------------------- textures and meshes */
@@ -722,7 +736,7 @@ struct PlatTexture
 static int texture_gpu(PlatTexture *t)
 {
     if (t->gpu < 0)
-        t->gpu = vkp_ui_texture_create(t->rgba, t->width, t->height, t->smooth, t->mips, false);
+        t->gpu = dxp_ui_texture_create(t->rgba, t->width, t->height, t->smooth, t->mips, false);
     return t->gpu;
 }
 
@@ -761,7 +775,7 @@ extern "C" void plat_texture_free(PlatTexture *t)
     if (!t)
         return;
     if (t->gpu >= 0)
-        vkp_ui_texture_free(t->gpu);
+        dxp_ui_texture_free(t->gpu);
     free(t->rgba);
     free(t);
 }
@@ -774,26 +788,26 @@ extern "C" void plat_texture_size(const PlatTexture *t, int *width, int *height)
 
 extern "C" void plat_draw_mesh(PlatTexture *texture, const PlatVertex *v, int count, const int *indices, int index_count)
 {
-    /* PlatVertex and VkpUiVertex are the same four floats and a colour */
+    /* PlatVertex and DxpUiVertex are the same four floats and a colour */
     const int tex = texture ? texture_gpu(texture) : -1;
     if (texture && tex < 0)
         return;
     if (!indices)
     {
-        vkp_ui_draw(tex, (const VkpUiVertex *)v, count - count % 3);
+        dxp_ui_draw(tex, (const DxpUiVertex *)v, count - count % 3);
         return;
     }
-    VkpUiVertex out[1536];
+    DxpUiVertex out[1536];
     for (int i = 0; i + 2 < index_count;)
     {
         int n = 0;
         for (; i + 2 < index_count && n + 3 <= 1536; i += 3, n += 3)
         {
-            out[n] = *(const VkpUiVertex *)&v[indices[i]];
-            out[n + 1] = *(const VkpUiVertex *)&v[indices[i + 1]];
-            out[n + 2] = *(const VkpUiVertex *)&v[indices[i + 2]];
+            out[n] = *(const DxpUiVertex *)&v[indices[i]];
+            out[n + 1] = *(const DxpUiVertex *)&v[indices[i + 1]];
+            out[n + 2] = *(const DxpUiVertex *)&v[indices[i + 2]];
         }
-        vkp_ui_draw(tex, out, n);
+        dxp_ui_draw(tex, out, n);
     }
 }
 
@@ -805,9 +819,9 @@ extern "C" void plat_draw_texture(PlatTexture *texture, float x, float y, float 
     if (id >= 0 && (tint >> 24) != 0)
     {
         int x0 = (int)(x + 0.5f), y0 = (int)(y + 0.5f);
-        vkp_ui_blend(blend); /* a picture drawn without blending ignores its alpha */
+        dxp_ui_blend(blend); /* a picture drawn without blending ignores its alpha */
         gpu_quad(id, (float)x0, (float)y0, (float)(x0 + (int)(w + 0.5f)), (float)(y0 + (int)(h + 0.5f)), 0, 0, 1, 1, tint);
-        vkp_ui_blend(true);
+        dxp_ui_blend(true);
     }
 }
 
@@ -834,7 +848,7 @@ extern "C" void plat_fill_rectf(float x, float y, float w, float h, uint32_t arg
         gpu_quad(-1, (float)x0, (float)y0, (float)(x0 + rw), (float)(y0 + rh), 0, 0, 0, 0, argb);
 }
 
-extern "C" void plat_set_clip(int x, int y, int w, int h) { vkp_ui_clip(x, y, w, h); }
+extern "C" void plat_set_clip(int x, int y, int w, int h) { dxp_ui_clip(x, y, w, h); }
 
 /* ---------------------------------------------------------------- the system */
 

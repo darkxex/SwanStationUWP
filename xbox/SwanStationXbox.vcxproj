@@ -78,17 +78,16 @@
         $(MSBuildProjectDirectory)\..\third_party\rcheevos\include;
         $(MSBuildProjectDirectory)\..\third_party\stb;
         $(MSBuildProjectDirectory)\..\third_party\swanstation\dep\libretro-common\include;
-        $(MSBuildProjectDirectory)\..\third_party\vulkan-headers\include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SwanStationXbox_UWP=1;SwanStationPS5_VULKAN=1;VK_USE_PLATFORM_WIN32_KHR=1;RC_CLIENT_SUPPORTS_HASH=1;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SwanStationXbox_UWP=1;SwanStationPS5_GPU=1;RC_CLIENT_SUPPORTS_HASH=1;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- the frontend's C is C11 with a few GNU idioms (compat/uwp_compat.h); these are the warnings that are noise there -->
       <DisableSpecificWarnings>4100;4101;4127;4244;4267;4305;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
-      <AdditionalDependencies>windowsapp.lib;xaudio2.lib;winhttp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>windowsapp.lib;xaudio2.lib;winhttp.lib;d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
@@ -116,6 +115,7 @@
     <ClCompile Include="..\src\**\*.c" Exclude="
         ..\src\platform\plat_sdl.c;
         ..\src\platform\ps5_*.c;
+        ..\src\platform\vk\**;
         ..\src\platform\console_curl_ps5.c;
         ..\src\net.c;
         ..\src\ntfs\**;

@@ -20,7 +20,6 @@
 #include "i18n.h"
 #include "platform/platform.h"
 #include "platform/crash.h"
-#include "platform/vk/vk_probe.h"
 #include "play.h"
 #include "remote.h"
 #include "ra/achievements.h"
@@ -2002,7 +2001,6 @@ int main(int argc, char **argv)
     SwanStationPS5_log(app.sandboxed ? "storage: sandboxed (%s)" : "storage: unlocked%s",
               app.sandboxed ? app.sandbox_reason : "");
     SwanStationPS5_log("storage probe before unlock: %s", plat_sandbox_probe());
-    vk_probe(app.paths.root); /* v2: proves the Vulkan driver runs; logs only */
 
     if (!app.storage_error[0])
         profiles_startup(); /* whose saves, settings and stats */

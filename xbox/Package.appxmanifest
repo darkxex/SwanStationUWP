@@ -46,5 +46,7 @@
     <!-- The recompiler (JIT): code pages that are executable. Developer-mode and sideloaded packages only. -->
     <rescap:Capability Name="codeGeneration" />
     <rescap:Capability Name="expandedResources" />
+    <!-- RetroArch-UWP (MesaBuild) declares it too -->
+    <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 </Package>
